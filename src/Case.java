@@ -20,4 +20,17 @@ public class Case {
     public void changeType(CaseType newType) {
         this.caseType = newType;
     }
+
+    public void addSand() {
+        switch (this.caseType) {
+            case vide:
+                this.caseType = CaseType.sable1;
+                break;
+            case sable1:
+                this.caseType = CaseType.sable2;
+                break;
+            default:
+                break;
+        }
+    }
 }

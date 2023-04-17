@@ -34,7 +34,8 @@ public class Vue {
     private final JFrame frame;
 
     private final VueGrille grille;
-    private final VueCommandes commandes;
+    private final VueTexte totalSable;
+    private final VueCommandes finDeTour;
 
     public Vue(Plateau p) {
         frame = new JFrame();
@@ -43,8 +44,10 @@ public class Vue {
 
         grille = new VueGrille(p);
         frame.add(grille);
-        commandes = new VueCommandes(p);
-        // frame.add(commandes);
+        totalSable = new VueTexte(p);
+        frame.add(totalSable);
+        finDeTour = new VueCommandes(p);
+        frame.add(finDeTour);
 
         frame.pack();
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -133,6 +136,48 @@ class VueGrille extends JPanel implements Observer {
     }
 }
 
+class VueTexte extends JTextPane implements Observer {
+    /** On maintient une référence vers le modèle. */
+    private int count = 0;
+
+    private Plateau plateau;
+
+    /** Constructeur. */
+    public VueTexte(Plateau p) {
+        this.plateau = p;
+        this.updateCount();
+        /** On enregistre la vue [this] en tant qu'observateur de [modele]. */
+        p.addObserver(this);
+
+        this.setText("Quantité totale de sable : " + count);
+        this.setEditable(false);
+    }
+
+    private void updateCount() {
+        this.count = 0;
+        for (int i = 0; i < this.plateau.size(); i++) {
+            for (int j = 0; j < this.plateau.size(); j++) {
+                if (this.plateau.getCase(i, j).getType() == CaseType.sable1) {
+                    this.count += 1;
+                } else if (this.plateau.getCase(i, j).getType() == CaseType.sable2) {
+                    this.count += 2;
+                }
+            }
+        }
+    }
+
+    /**
+     * L'interface [Observer] demande de fournir une méthode [update], qui
+     * sera appelée lorsque la vue sera notifiée d'un changement dans le
+     * modèle. Ici on se content de réafficher toute la grille avec la méthode
+     * prédéfinie [repaint].
+     */
+    public void update() {
+        this.updateCount();
+        this.setText("Quantité totale de sable : " + count);
+    }
+}
+
 
 /**
  * Une classe pour représenter la zone contenant le bouton.
@@ -155,8 +200,8 @@ class VueCommandes extends JPanel {
          * texte qui doit l'étiqueter.
          * Puis on ajoute ce bouton au panneau [this].
          */
-        JButton boutonAvance = new JButton(">");
-        this.add(boutonAvance);
+        JButton finDeTour = new JButton("Fin de tour");
+        this.add(finDeTour);
         /**
          * Le bouton, lorsqu'il est cliqué par l'utilisateur, produit un
          * événement, de classe [ActionEvent].
@@ -181,7 +226,7 @@ class VueCommandes extends JPanel {
          */
         Controleur ctrl = new Controleur(plateau);
         /** Enregistrement du contrôleur comme auditeur du bouton. */
-        boutonAvance.addActionListener(ctrl);
+        finDeTour.addActionListener(ctrl);
 
         /**
          * Variante : une lambda-expression qui évite de créer une classe
@@ -220,6 +265,7 @@ class Controleur implements ActionListener {
      * méthode [avance] du modèle.
      */
     public void actionPerformed(ActionEvent e) {
-        System.out.println("Clicked");
+        System.out.println("Fin de tour");
+        plateau.avanceTour();
     }
 }
