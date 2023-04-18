@@ -17,7 +17,11 @@ public class Case {
         return this.caseType;
     }
 
-    public void changeType(CaseType newType) {
+    public String toString() {
+        return "Case(type: " + this.caseType + ")";
+    }
+
+    public void setType(CaseType newType) {
         this.caseType = newType;
     }
 

@@ -102,7 +102,7 @@ class VueGrille extends JPanel implements Observer {
                  * On lui fournit les informations de dessin [g] et les
                  * coordonnées du coin en haut à gauche.
                  */
-                paint(g, plateau.getCase(i, j), (i)*TAILLE, (j)*TAILLE);
+                paint(g, plateau.getCase(i, j), (j)*TAILLE, (i)*TAILLE);
             }
         }
     }

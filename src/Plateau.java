@@ -56,7 +56,7 @@ public class Plateau  extends Observable {
     }
 
     public void updateCase(int i, int j, CaseType newType) {
-        this.plateau.get(i).get(j).changeType(newType);
+        this.plateau.get(i).get(j).setType(newType);
         this.notifyObservers();
     }
 
@@ -96,76 +96,85 @@ public class Plateau  extends Observable {
 
                 ArrayList<Integer> oeilPos = this.getOeil();
 
-                System.out.print(oeilPos);
 
                 // 1 <= force <= 3
                 final int force = (int) (Math.floor(Math.random()*2.9) + 1);
 
-                if (dirP < 0.25) {
-                    // nord
-                    System.out.print("nord\n");
+                System.out.print(force + " ");
+                if (dirP < 2.0) {
+                    // sud
+                    System.out.print("est\n");
                     direction = -1;
 
-                    int j = oeilPos.get(0);
-                    final int maxVal = Math.max(0, oeilPos.get(0) - force)+1;
+                    /* int j = oeilPos.get(0);
 
-                    while (j >= maxVal) {
-                        // permutation
-                        final Case tmp = this.plateau.get(oeilPos.get(0)-1).get(oeilPos.get(1));
-                        this.plateau.get(oeilPos.get(0)-1).set(oeilPos.get(1), this.plateau.get(oeilPos.get(0)).get(oeilPos.get(1)));
+                    this.getCase(j-1, oeilPos.get(1)).addSand();
+                    final CaseType t1 = this.getCase(j-1, oeilPos.get(1)).getType();
+                    this.updateCase(j, oeilPos.get(1), t1);
+                    this.updateCase(j-1, oeilPos.get(1), CaseType.oeil);*/
+
+                    int j = oeilPos.get(1);
+
+                    this.getCase(oeilPos.get(0), j+1).addSand();
+                    final CaseType t1 = this.getCase(oeilPos.get(0), j+1).getType();
+                    this.updateCase(oeilPos.get(0), j, t1);
+                    this.updateCase(oeilPos.get(0), j+1, CaseType.oeil);
+
+                    /* while (j > 0 && j > oeilPos.get(0) - force) {
+                        final Case tmp = this.getCase(j-1, oeilPos.get(1));
+                        tmp.addSand();
+                        this.plateau.get(j-1).set(oeilPos.get(1), this.getCase(oeilPos.get(0), oeilPos.get(1)));
                         this.plateau.get(oeilPos.get(0)).set(oeilPos.get(1), tmp);
-                        this.getCase(oeilPos.get(0), oeilPos.get(1)).addSand();
                         oeilPos = this.getOeil();
                         j--;
-                    }
+                    } */
 
                 } else if (dirP < 0.5) {
-                    // sud
-                    System.out.print("sud\n");
+                    // nord
+                    System.out.print("nord\n");
                     direction = 1;
 
+
                     int j = oeilPos.get(0);
-                    final int maxVal = Math.min(this.plateau.size(), oeilPos.get(0) + force)-1;
 
-                    while (j <= maxVal) {
-                        // permutation
-                        final Case tmp = this.plateau.get(oeilPos.get(0)+1).get(oeilPos.get(1));
-                        this.plateau.get(oeilPos.get(0)+1).set(oeilPos.get(1), this.plateau.get(oeilPos.get(0)).get(oeilPos.get(1)));
+                    while (j < this.plateau.size() -1 && j < oeilPos.get(0) + force -1) {
+                        final Case tmp = this.getCase(j+1, oeilPos.get(1));
+                        tmp.addSand();
+                        this.plateau.get(j+1).set(oeilPos.get(1), this.getCase(oeilPos.get(0), oeilPos.get(1)));
                         this.plateau.get(oeilPos.get(0)).set(oeilPos.get(1), tmp);
-                        this.getCase(oeilPos.get(0), oeilPos.get(1)).addSand();
                         oeilPos = this.getOeil();
                         j++;
                     }
+
                 } else if (dirP < 0.75) {
-                    // ouest
-                    System.out.print("ouest\n");
-                    direction = 2;
-
-                    int j = oeilPos.get(1);
-                    final int maxVal = Math.min(this.plateau.size(), oeilPos.get(1) + force)-1;
-
-                    while (j <= maxVal) {
-                        // permutation
-                        final Case tmp = this.plateau.get(oeilPos.get(0)).get(oeilPos.get(1)+1);
-                        this.plateau.get(oeilPos.get(0)).set(oeilPos.get(1)+1, this.plateau.get(oeilPos.get(0)).get(oeilPos.get(1)));
-                        this.plateau.get(oeilPos.get(0)).set(oeilPos.get(1), tmp);
-                        this.getCase(oeilPos.get(0), oeilPos.get(1)).addSand();
-                        oeilPos = this.getOeil();
-                        j++;
-                    }
-                } else {
                     // est
                     System.out.print("est\n");
-                    direction = -2;
-                    int j = oeilPos.get(1);
-                    final int maxVal = Math.max(0, oeilPos.get(1) - force)+1;
+                    direction = 2;
 
-                    while (j >= maxVal) {
-                        // permutation
-                        final Case tmp = this.plateau.get(oeilPos.get(0)).get(oeilPos.get(1)-1);
-                        this.plateau.get(oeilPos.get(0)).set(oeilPos.get(1)-1, this.plateau.get(oeilPos.get(0)).get(oeilPos.get(1)));
+
+                    int j = oeilPos.get(1);
+
+                    while (j < this.plateau.size() -1 && j < oeilPos.get(1) + force -1) {
+                        final Case tmp = this.getCase(oeilPos.get(0), j+1);
+                        tmp.addSand();
+                        this.plateau.get(oeilPos.get(0)).set(j+1, this.getCase(oeilPos.get(0), oeilPos.get(1)));
                         this.plateau.get(oeilPos.get(0)).set(oeilPos.get(1), tmp);
-                        this.getCase(oeilPos.get(0), oeilPos.get(1)).addSand();
+                        oeilPos = this.getOeil();
+                        j++;
+                    }
+
+                } else {
+                    // est
+                    System.out.print("ouest\n");
+                    direction = -2;
+
+                    int j = oeilPos.get(1);
+
+                    while (j > 0 && j > oeilPos.get(0) - force) {
+                        final Case tmp = this.getCase(oeilPos.get(0), j-1);
+                        tmp.addSand();
+                        this.plateau.get(oeilPos.get(1)).set(j-1, this.getCase(oeilPos.get(0), oeilPos.get(1)));
+                        this.plateau.get(oeilPos.get(0)).set(oeilPos.get(1), tmp);
                         oeilPos = this.getOeil();
                         j--;
                     }
