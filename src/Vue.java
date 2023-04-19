@@ -1,7 +1,6 @@
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.awt.event.*;
 import java.util.ArrayList;
 
 interface Observer {
@@ -39,6 +38,36 @@ public class Vue {
 
     public Vue(Plateau p) {
         frame = new JFrame();
+        frame.setFocusable(true);
+        frame.addKeyListener(new KeyListener(){
+            @Override
+            public void keyPressed(KeyEvent evt) {
+                System.out.print(evt.getKeyCode());
+                if (evt.getKeyCode() == 104) {
+                    // 8 -> deplacement vers le haut
+                    System.out.print("haut");
+                } else if (evt.getKeyCode() == 102) {
+                    // 6 -> deplacement vers la droite
+                    System.out.print("droite");
+                } else if (evt.getKeyCode() == 100) {
+                    // 4 -> deplacement vers la gauche
+                    System.out.print("gauche");
+                } else if (evt.getKeyCode() == 98) {
+                    // 2 -> deplacement vers le bas
+                    System.out.print("bas");
+                }
+            }
+
+            @Override
+            public void keyTyped(KeyEvent e) {
+                throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+                throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+            }
+        });
         frame.setTitle("Le desert interdit");
         frame.setLayout(new FlowLayout());
 
@@ -133,38 +162,33 @@ class VueGrille extends JPanel implements Observer {
         g.setColor(col);
         /** Coloration d'un rectangle. */
         g.fillRect(x, y, TAILLE, TAILLE);
+
+        final int t = 10;
+        int i = 0;
+        for (Joueur j: c.getJoueurs()) {
+            g.setColor(j.getColor());
+            g.fillRect(x+5 + i*(t+5), y+TAILLE-5-t, t, t);
+            i++;
+        }
     }
 }
 
 class VueTexte extends JTextPane implements Observer {
     /** On maintient une référence vers le modèle. */
-    private int count = 0;
 
     private Plateau plateau;
 
     /** Constructeur. */
     public VueTexte(Plateau p) {
         this.plateau = p;
-        this.updateCount();
         /** On enregistre la vue [this] en tant qu'observateur de [modele]. */
         p.addObserver(this);
 
-        this.setText("Quantité totale de sable : " + count);
+        this.setText("Quantité totale de sable : " + p.getSableCount());
         this.setEditable(false);
     }
 
-    private void updateCount() {
-        this.count = 0;
-        for (int i = 0; i < this.plateau.size(); i++) {
-            for (int j = 0; j < this.plateau.size(); j++) {
-                if (this.plateau.getCase(i, j).getType() == CaseType.sable1) {
-                    this.count += 1;
-                } else if (this.plateau.getCase(i, j).getType() == CaseType.sable2) {
-                    this.count += 2;
-                }
-            }
-        }
-    }
+
 
     /**
      * L'interface [Observer] demande de fournir une méthode [update], qui
@@ -173,8 +197,7 @@ class VueTexte extends JTextPane implements Observer {
      * prédéfinie [repaint].
      */
     public void update() {
-        this.updateCount();
-        this.setText("Quantité totale de sable : " + count);
+        this.setText("Quantité totale de sable : " + this.plateau.getSableCount());
     }
 }
 
@@ -267,5 +290,25 @@ class Controleur implements ActionListener {
     public void actionPerformed(ActionEvent e) {
         System.out.println("Fin de tour");
         plateau.avanceTour();
+    }
+}
+
+class DeplacementListener extends KeyAdapter {
+    @Override
+    public void keyTyped(KeyEvent evt) {
+        System.out.print(evt.getKeyCode());
+        if (evt.getKeyCode() == 104) {
+            // 8 -> deplacement vers le haut
+            System.out.print("haut");
+        } else if (evt.getKeyCode() == 102) {
+            // 6 -> deplacement vers la droite
+            System.out.print("droite");
+        } else if (evt.getKeyCode() == 100) {
+            // 4 -> deplacement vers la gauche
+            System.out.print("gauche");
+        } else if (evt.getKeyCode() == 98) {
+            // 2 -> deplacement vers le bas
+            System.out.print("bas");
+        }
     }
 }
