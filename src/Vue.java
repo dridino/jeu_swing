@@ -1,7 +1,10 @@
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
+import java.util.Collections;
 
 interface Observer {
     public void update();
@@ -27,74 +30,216 @@ abstract class Observable {
 
 
 
-public class Vue {
+public class Vue implements Observer {
     public static final Integer TAILLE = 5;
 
     private final JFrame frame;
+    private Game game;
 
-    private final VueGrille grille;
-    private final VueTexte totalSable;
-    private final VueCommandes finDeTour;
+    public Vue(Game g) {
+        this.game = g;
+        g.addObserver(this);
+        this.frame = new JFrame();
+        this.frame.setFocusable(true);
+        this.frame.setTitle("Le desert interdit");
+        this.frame.setLayout(new GridBagLayout());
+        this.build();
+        this.frame.pack();
+        this.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.frame.setMinimumSize(new Dimension(1200, 800));
+        this.frame.setVisible(true);
+    }
 
-    public Vue(Plateau p) {
-        frame = new JFrame();
-        frame.setFocusable(true);
-        frame.addKeyListener(new KeyListener(){
-            @Override
-            public void keyPressed(KeyEvent evt) {
-                System.out.print(evt.getKeyCode());
-                if (evt.getKeyCode() == 104) {
-                    // 8 -> deplacement vers le haut
-                    System.out.print("haut");
-                } else if (evt.getKeyCode() == 102) {
-                    // 6 -> deplacement vers la droite
-                    System.out.print("droite");
-                } else if (evt.getKeyCode() == 100) {
-                    // 4 -> deplacement vers la gauche
-                    System.out.print("gauche");
-                } else if (evt.getKeyCode() == 98) {
-                    // 2 -> deplacement vers le bas
-                    System.out.print("bas");
-                }
-            }
+    private void build() {
+        switch (this.game.getCurrentScreen()) {
+            case numberOfPlayers:
+                this.frame.getContentPane().add(new FirstScreen(this.game), new GridBagConstraints());
+                break;
+            case playerSelection:
+                this.frame.getContentPane().add(new SecondScreen(this.game), new GridBagConstraints());
+                break;
+            default:
+                break;
+        }
+    }
 
-            @Override
-            public void keyTyped(KeyEvent e) {
-                throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-            }
-
-            @Override
-            public void keyReleased(KeyEvent e) {
-                throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-            }
-        });
-        frame.setTitle("Le desert interdit");
-        frame.setLayout(new FlowLayout());
-
-        grille = new VueGrille(p);
-        frame.add(grille);
-        totalSable = new VueTexte(p);
-        frame.add(totalSable);
-        finDeTour = new VueCommandes(p);
-        frame.add(finDeTour);
-
-        frame.pack();
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setVisible(true);
+    public void update() {
+        this.frame.getContentPane().removeAll();
+        this.build();
+        this.frame.revalidate();
+        this.frame.repaint();
     }
 }
 
+class FirstScreen extends JPanel {
+    private final Game game;
+
+    public FirstScreen(Game g) {
+        this.game = g;
+        this.build();
+    }
+
+    public void build() {
+        this.setLayout(new FlowLayout());
+
+        final JTextArea text = new JTextArea("Nombre de joueurs : ");
+        text.setEditable(false);
+        this.add(text);
+
+        final JSlider slider = new JSlider(2, 5, 2);
+        slider.setMajorTickSpacing(1);
+        slider.setPaintTrack(true);
+        slider.setPaintTicks(true);
+        slider.setPaintLabels(true);
+        this.add(slider);
+
+        final JButton button = new JButton("Suivant");
+        final ActionListener actionListener = new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                game.setNumberOfPlayers(slider.getValue());
+                game.nextScreen();
+            }
+        };
+        button.addActionListener(actionListener);
+        this.add(button);
+    }
+}
+
+class SecondScreen extends JPanel {
+    private final Game game;
+    private final Deck<PlayerType> deck;
+    private String pseudo;
+
+    private JTextArea text;
+    private JTextField textField;
+    private DeckLayout<PlayerType> deckLayout;
+    private JButton button;
+    private PlayerType playerType;
+    private int i = 0;
+
+    public SecondScreen(Game g) {
+        this.game = g;
+        final ArrayList<PlayerType> types = new ArrayList<>();
+        Collections.addAll(types, PlayerType.values());
+        Collections.shuffle(types);
+        this.deck = new Deck<PlayerType>(types, DeckType.playerType);
+        this.build();
+    }
+
+    public void build() {
+        this.setLayout(new FlowLayout());
+
+        // TEXT
+        this.text = new JTextArea("Nom Joueur : ");
+        this.text.setEditable(false);
+        this.add(text);
+
+        // TEXTFIELD
+        this.textField = new JTextField("");
+        this.textField.getDocument().addDocumentListener(new DocumentListener() {
+            public void changedUpdate(DocumentEvent e) {
+                pseudo = textField.getText();
+            }
+            public void removeUpdate(DocumentEvent e) {
+                pseudo = textField.getText();
+            }
+            public void insertUpdate(DocumentEvent e) {
+                pseudo = textField.getText();
+            }
+        });
+        this.textField.setPreferredSize(new Dimension(200, 25));
+        this.textField.setMaximumSize(new Dimension(200, 25));
+        this.add(this.textField);
+
+        // DECK
+        final MouseAdapter mouseAdapter = new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent me) {
+                super.mouseClicked(me);
+                if (playerType == null) {
+                    playerType = deck.pick();
+                    final Role role = new Role(playerType);
+                    JOptionPane.showMessageDialog(null, role.getDescription(), "Pioche", JOptionPane.INFORMATION_MESSAGE);
+                }
+            }
+        };
+        this.deckLayout = new DeckLayout<PlayerType>(this.deck, mouseAdapter);
+        this.add(this.deckLayout);
+
+        // BUTTON
+        final JButton button = new JButton("Suivant");
+        final ActionListener actionListener = new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                System.out.println(pseudo);
+                game.addPlayer(new Player(i, pseudo, null, playerType));
+                if (i < game.getNumberOfPlayers() - 1) {
+                    textField.setText("");
+                    playerType = null;
+                    i++;
+                } else {
+                    game.nextScreen();
+                }
+            }
+        };
+        button.addActionListener(actionListener);
+        this.add(button);
+    }
+}
+
+class DeckLayout<E> extends JPanel {
+    private final Deck<E> deck;
+    private final Color color;
+
+    public DeckLayout(Deck<E> deck, MouseAdapter mouseAdapter) {
+        this.deck = deck;
+        switch (deck.getType()) {
+            case playerType:
+                this.color = Color.green;
+                break;
+            default:
+                this.color = Color.red;
+                break;
+        }
+        addMouseListener(mouseAdapter);
+        this.setPreferredSize(new Dimension(100 + 4, 150 + 4));
+    }
+
+    public void paintComponent(Graphics g) {
+        super.repaint();
+        final Graphics2D g2 = (Graphics2D) g;
+        float thickness = 4;
+        Stroke oldStroke = g2.getStroke();
+        g2.setStroke(new BasicStroke(thickness));
+
+        g2.setColor(Color.white);
+        g2.fillRoundRect(2, 2, 100, 150, 5, 5);
+
+        g2.setColor(this.color);
+        g2.drawRoundRect(2, 2, 100, 150, 5, 5);
+
+        g2.setStroke(oldStroke);
+
+        g2.setColor(Color.black);
+        g2.setFont(new Font("default", Font.BOLD, 12));
+        g2.drawString("Paquet", 2 + 4, 18);
+        g2.drawString("Aventurier", 2 + 4, 38);
+    }
+}
+
+
 class VueGrille extends JPanel implements Observer {
     /** On maintient une référence vers le modèle. */
-    private final Plateau plateau;
+    private final Game game;
     /** Définition d'une taille (en pixels) pour l'affichage des cellules. */
     private final static int TAILLE = 80;
 
     /** Constructeur. */
-    public VueGrille(Plateau p) {
-        this.plateau = p;
+    public VueGrille(Game g) {
+        this.game = g;
         /** On enregistre la vue [this] en tant qu'observateur de [modele]. */
-        p.addObserver(this);
+        this.game.addObserver(this);
         /**
          * Définition et application d'une taille fixe pour cette zone de
          * l'interface, calculée en fonction du nombre de cellules et de la
@@ -131,7 +276,7 @@ class VueGrille extends JPanel implements Observer {
                  * On lui fournit les informations de dessin [g] et les
                  * coordonnées du coin en haut à gauche.
                  */
-                paint(g, plateau.getCase(i, j), (j)*TAILLE, (i)*TAILLE);
+                paint(g, game.getBoard().getCell(new Coord(i, j)), (j)*TAILLE, (i)*TAILLE);
             }
         }
     }
@@ -142,17 +287,17 @@ class VueGrille extends JPanel implements Observer {
      * [CModele.Cellule].
      * Ceci serait impossible si [Cellule] était déclarée privée dans [CModele].
      */
-    private void paint(Graphics g, Case c, int x, int y) {
+    private void paint(Graphics g, Cell c, int x, int y) {
         /** Sélection d'une couleur. */
         final Color col;
         switch (c.getType()) {
-            case sable1 :
+            case sand1 :
                 col = Color.yellow;
                 break;
-            case sable2 :
+            case sand2 :
                 col = Color.orange;
                 break;
-            case oeil :
+            case eye :
                 col = Color.black;
                 break;
             default:
@@ -165,8 +310,9 @@ class VueGrille extends JPanel implements Observer {
 
         final int t = 10;
         int i = 0;
-        for (Joueur j: c.getJoueurs()) {
-            g.setColor(j.getColor());
+        for (int pid: c.getPlayerIds()) {
+            final Player p = game.getPlayers().get(pid);
+            g.setColor(p.getColor());
             g.fillRect(x+5 + i*(t+5), y+TAILLE-5-t, t, t);
             i++;
         }
@@ -176,15 +322,15 @@ class VueGrille extends JPanel implements Observer {
 class VueTexte extends JTextPane implements Observer {
     /** On maintient une référence vers le modèle. */
 
-    private Plateau plateau;
+    private Game game;
 
     /** Constructeur. */
-    public VueTexte(Plateau p) {
-        this.plateau = p;
+    public VueTexte(Game g) {
+        this.game = g;
         /** On enregistre la vue [this] en tant qu'observateur de [modele]. */
-        p.addObserver(this);
+        this.game.addObserver(this);
 
-        this.setText("Quantité totale de sable : " + p.getSableCount());
+        this.setText("Quantité totale de sable : " + g.getBoard().getSandLevel());
         this.setEditable(false);
     }
 
@@ -197,7 +343,7 @@ class VueTexte extends JTextPane implements Observer {
      * prédéfinie [repaint].
      */
     public void update() {
-        this.setText("Quantité totale de sable : " + this.plateau.getSableCount());
+        this.setText("Quantité totale de sable : " + this.game.getBoard().getSandLevel());
     }
 }
 
@@ -213,11 +359,11 @@ class VueCommandes extends JPanel {
      * Pour que le bouton puisse transmettre ses ordres, on garde une
      * référence au modèle.
      */
-    private final Plateau plateau;
+    private final Game game;
 
     /** Constructeur. */
-    public VueCommandes(Plateau p) {
-        this.plateau = p;
+    public VueCommandes(Game g) {
+        this.game = g;
         /**
          * On crée un nouveau bouton, de classe [JButton], en précisant le
          * texte qui doit l'étiqueter.
@@ -247,7 +393,7 @@ class VueCommandes extends JPanel {
          * contrôleur sera donc particulièrement simple. Cela nécessite
          * néanmoins la création d'une classe dédiée.
          */
-        Controleur ctrl = new Controleur(plateau);
+        Controleur ctrl = new Controleur(this.game);
         /** Enregistrement du contrôleur comme auditeur du bouton. */
         finDeTour.addActionListener(ctrl);
 
@@ -281,15 +427,15 @@ class Controleur implements ActionListener {
      * faire directement référence au modèle enregistré pour la classe
      * englobante [VueCommandes].
      */
-    Plateau plateau;
-    public Controleur(Plateau p) { this.plateau = p; }
+    private final Game game;
+    public Controleur(Game g) { this.game = g; }
     /**
      * Action effectuée à réception d'un événement : appeler la
      * méthode [avance] du modèle.
      */
     public void actionPerformed(ActionEvent e) {
         System.out.println("Fin de tour");
-        plateau.avanceTour();
+        game.endOfTurn();
     }
 }
 
