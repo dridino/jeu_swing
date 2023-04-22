@@ -1,19 +1,24 @@
+import java.util.ArrayList;
 import java.util.List;
 
-public class Cell {
+public class Cell extends Observable {
     private CellType type;
-    private List<Integer> playerIds;
-    private Equipment equipment;
+    private ArrayList<Integer> playerIds = new ArrayList<Integer>();
+    private CellContent content;
+    private ObjectType objectType;
     private boolean equipmentPicked = false;
 
-    public Cell(CellType type, List<Integer> playerIds, Equipment equipment) {
+    public Cell(CellType type, ArrayList<Integer> players, CellContent content, ObjectType objectType) {
         this.type = type;
-        this.playerIds = playerIds;
-        this.equipment = equipment;
+        this.playerIds.addAll(players);
+        this.content = content;
+        this.objectType = objectType;
+        System.out.println(this.playerIds);
+        notifyObservers();
     }
 
     public Cell copy() {
-        return new Cell(this.type, this.playerIds, this.equipment);
+        return new Cell(this.type, this.playerIds, this.content, this.objectType);
     }
 
     public CellType getType() {
@@ -23,13 +28,19 @@ public class Cell {
 
     public void setType(CellType t) {
         this.type = t;
+        notifyObservers();
     }
 
     public boolean isEquipmentPicked() {
         return this.equipmentPicked;
     }
-    public Equipment getEquipment() {
-        return this.equipment;
+
+    public CellContent getContent() {
+        return this.content;
+    }
+
+    public ObjectType getObjectType() {
+        return this.objectType;
     }
 
     public void pickEquipment() {

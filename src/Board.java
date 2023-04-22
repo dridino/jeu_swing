@@ -1,14 +1,97 @@
 import java.util.ArrayList;
+import java.util.Collections;
 
-public class Board extends Observable {
+public class Board extends Observable implements Observer {
 
     private Cell[][] board = new Cell[5][5];
     private int sandLevel = 8;
     private double stormLevel = 2.0;
 
-    public Board() {
-        // random l'equipement
-        this.board[0][0] = new Cell(CellType.empty, new ArrayList<Integer>(), null);
+    public Board(ArrayList<Player> p) {
+        final ArrayList<CellContent> contents = new ArrayList<>();
+        final ArrayList<ObjectType> objects = new ArrayList<>();
+        final CellContent[] values1 = {
+                CellContent.oasis,
+                CellContent.oasis,
+                CellContent.mirage,
+
+                CellContent.crash,
+                CellContent.tunnel,
+                CellContent.tunnel,
+                CellContent.tunnel,
+                CellContent.equipment,
+                CellContent.equipment,
+                CellContent.equipment,
+                CellContent.equipment,
+                CellContent.equipment,
+                CellContent.equipment,
+                CellContent.equipment,
+                CellContent.equipment,
+
+                CellContent.takeoff,
+
+                CellContent.clueRow,
+                CellContent.clueRow,
+                CellContent.clueRow,
+                CellContent.clueRow,
+
+                CellContent.clueColumn,
+                CellContent.clueColumn,
+                CellContent.clueColumn,
+                CellContent.clueColumn,
+        };
+
+        final ObjectType[] values2 = {
+                ObjectType.blaster,
+                ObjectType.blaster,
+                ObjectType.blaster,
+
+                ObjectType.jetpack,
+                ObjectType.jetpack,
+                ObjectType.jetpack,
+
+                ObjectType.shield,
+                ObjectType.shield,
+
+                ObjectType.xRay,
+                ObjectType.xRay,
+
+                ObjectType.time,
+
+                ObjectType.water,
+        };
+        Collections.addAll(contents, values1);
+        final Deck<CellContent> deck = new Deck<CellContent>(contents, DeckType.cellContent);
+
+        Collections.addAll(objects, values2);
+        Collections.shuffle(objects);
+
+        int idx = 0;
+        for (int i = 0; i < 5; i++) {
+            for (int j = 0; j < 5; j++) {
+                if (i != 2 || j != 2) {
+                    final CellType cellType = ((i == 0 && (j == 2)) || (i == 1 && (j == 1 || j == 3)) || (i == 2 && (j == 0 || j == 4)) || (i == 3 && (j == 1 || j == 3)) || (i == 4 && j == 2)) ? CellType.sand1 : CellType.empty;
+                    final CellContent cellContent = deck.pick();
+                    final ObjectType objectType;
+                    final ArrayList<Integer> players = new ArrayList<Integer>();
+
+                    if (cellContent == CellContent.crash || cellContent == CellContent.tunnel || cellContent == CellContent.equipment) {
+                        objectType = objects.get(idx);
+                        idx++;
+
+                    } else {
+                        objectType = ObjectType.none;
+                    }
+                    this.board[i][j] = new Cell(cellType, players, cellContent, objectType);
+                } else {
+                    this.board[i][j] = new Cell(CellType.eye, new ArrayList<Integer>(), CellContent.none, ObjectType.none);
+                }
+                this.board[i][j].addObserver(this);
+            }
+        }
+        this.notifyObservers();
+        /*
+        this.board[0][0] = new Cell(CellType.empty, new ArrayList<Integer>(), contents);
         this.board[0][1] = new Cell(CellType.empty, new ArrayList<Integer>(), null);
         this.board[0][2] = new Cell(CellType.sand1, new ArrayList<Integer>(), null);
         this.board[0][3] = new Cell(CellType.empty, new ArrayList<Integer>(), null);
@@ -37,6 +120,26 @@ public class Board extends Observable {
         this.board[4][2] = new Cell(CellType.sand1, new ArrayList<Integer>(), null);
         this.board[4][3] = new Cell(CellType.empty, new ArrayList<Integer>(), null);
         this.board[4][4] = new Cell(CellType.empty, new ArrayList<Integer>(), null);
+         */
+    }
+
+    public void positionPlayers(ArrayList<Player> players) {
+        for (int i = 0; i < 5; i++) {
+            for (int j = 0; j < 5; j++) {
+                final Cell current = this.board[i][j];
+                if (current.getContent() == CellContent.crash) {
+                    for (Player p: players) {
+                        current.addPlayer(p.getId());
+                        p.setPosition(new Coord(i, j));
+                    }
+                    break;
+                }
+            }
+        }
+        notifyObservers();
+    }
+
+    public void update() {
         this.notifyObservers();
     }
 

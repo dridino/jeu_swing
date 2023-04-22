@@ -2,7 +2,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Game extends Observable implements Observer {
-    private Board board = new Board();
+    private Board board;
     private ArrayList<Player> players = new ArrayList<Player>();
     private int currentPlayer = 0;
 
@@ -14,7 +14,8 @@ public class Game extends Observable implements Observer {
         for (Player p: players) {
             p.addObserver(this);
         }
-        board.addObserver(this);
+        this.board = new Board(players);
+        this.board.addObserver(this);
         this.players = players;
     }
 
@@ -24,7 +25,7 @@ public class Game extends Observable implements Observer {
     }
 
     public ScreenType getCurrentScreen() {
-        return currentScreen;
+        return this.currentScreen;
     }
 
     public void nextScreen() {
@@ -33,6 +34,7 @@ public class Game extends Observable implements Observer {
                 this.currentScreen = ScreenType.playerSelection;
                 break;
             case playerSelection:
+                this.board.positionPlayers(this.players);
                 this.currentScreen = ScreenType.game;
                 break;
             case game:
@@ -70,6 +72,7 @@ public class Game extends Observable implements Observer {
         final Coord oldPos = player.getPosition();
         player.setPosition(c);
         this.board.movePlayer(oldPos, c, id);
+        notifyObservers();
         return c;
     }
 

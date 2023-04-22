@@ -1,10 +1,12 @@
 import java.util.ArrayList;
+import java.util.Collections;
 
 public class Deck<E> {
     private ArrayList<E> elements;
     private DeckType type;
 
     public Deck(ArrayList<E> elements, DeckType type) {
+        Collections.shuffle(elements);
         this.elements = elements;
         this.type = type;
     }

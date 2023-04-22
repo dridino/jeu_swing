@@ -58,6 +58,8 @@ public class Vue implements Observer {
             case playerSelection:
                 this.frame.getContentPane().add(new SecondScreen(this.game), new GridBagConstraints());
                 break;
+            case game:
+                this.frame.getContentPane().add(new ThirdScreen(this.game), new GridBagConstraints());
             default:
                 break;
         }
@@ -122,7 +124,6 @@ class SecondScreen extends JPanel {
         this.game = g;
         final ArrayList<PlayerType> types = new ArrayList<>();
         Collections.addAll(types, PlayerType.values());
-        Collections.shuffle(types);
         this.deck = new Deck<PlayerType>(types, DeckType.playerType);
         this.build();
     }
@@ -172,7 +173,6 @@ class SecondScreen extends JPanel {
         final ActionListener actionListener = new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                System.out.println(pseudo);
                 game.addPlayer(new Player(i, pseudo, null, playerType));
                 if (i < game.getNumberOfPlayers() - 1) {
                     textField.setText("");
@@ -228,18 +228,15 @@ class DeckLayout<E> extends JPanel {
     }
 }
 
-
-class VueGrille extends JPanel implements Observer {
+class ThirdScreen extends JPanel {
     /** On maintient une référence vers le modèle. */
     private final Game game;
     /** Définition d'une taille (en pixels) pour l'affichage des cellules. */
     private final static int TAILLE = 80;
 
     /** Constructeur. */
-    public VueGrille(Game g) {
+    public ThirdScreen(Game g) {
         this.game = g;
-        /** On enregistre la vue [this] en tant qu'observateur de [modele]. */
-        this.game.addObserver(this);
         /**
          * Définition et application d'une taille fixe pour cette zone de
          * l'interface, calculée en fonction du nombre de cellules et de la
@@ -249,14 +246,6 @@ class VueGrille extends JPanel implements Observer {
                 TAILLE*Vue.TAILLE);
         this.setPreferredSize(dim);
     }
-
-    /**
-     * L'interface [Observer] demande de fournir une méthode [update], qui
-     * sera appelée lorsque la vue sera notifiée d'un changement dans le
-     * modèle. Ici on se content de réafficher toute la grille avec la méthode
-     * prédéfinie [repaint].
-     */
-    public void update() { repaint(); }
 
     /**
      * Les éléments graphiques comme [JPanel] possèdent une méthode
@@ -308,6 +297,7 @@ class VueGrille extends JPanel implements Observer {
         /** Coloration d'un rectangle. */
         g.fillRect(x, y, TAILLE, TAILLE);
 
+        // joueur
         final int t = 10;
         int i = 0;
         for (int pid: c.getPlayerIds()) {
