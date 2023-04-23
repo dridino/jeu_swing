@@ -70,18 +70,36 @@ public class Game extends Observable implements Observer {
     public Coord movePlayer(int id, Coord c) {
         final Player player = this.players.get(id);
         final Coord oldPos = player.getPosition();
+        if (player.getRemainingActions() == 0) {
+            return oldPos;
+        }
         player.setPosition(c);
+        player.increaseActions(PlayerAction.move);
         this.board.movePlayer(oldPos, c, id);
         notifyObservers();
         return c;
+    }
+
+    public void removeSand(Coord c) {
+        final Player player = this.players.get(this.currentPlayer);
+        if (player.getRemainingActions() == 0) {
+            return;
+        }
+        player.increaseActions(PlayerAction.removeSand);
+        this.board.getCell(c).removeSand();
+        notifyObservers();
     }
 
     public Board getBoard() {
         return this.board;
     }
 
-    public int getCurrentPlayer() {
+    public int getCurrentPlayerId() {
         return this.currentPlayer;
+    }
+
+    public Player getCurrentPlayer() {
+        return this.players.get(this.currentPlayer);
     }
 
     public void endOfTurn() {

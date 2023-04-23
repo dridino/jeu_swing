@@ -41,50 +41,18 @@ public class Board extends Observable implements Observer {
                 CellContent.clueColumn,
         };
 
-        final ObjectType[] values2 = {
-                ObjectType.blaster,
-                ObjectType.blaster,
-                ObjectType.blaster,
-
-                ObjectType.jetpack,
-                ObjectType.jetpack,
-                ObjectType.jetpack,
-
-                ObjectType.shield,
-                ObjectType.shield,
-
-                ObjectType.xRay,
-                ObjectType.xRay,
-
-                ObjectType.time,
-
-                ObjectType.water,
-        };
         Collections.addAll(contents, values1);
         final Deck<CellContent> deck = new Deck<CellContent>(contents, DeckType.cellContent);
 
-        Collections.addAll(objects, values2);
-        Collections.shuffle(objects);
-
-        int idx = 0;
         for (int i = 0; i < 5; i++) {
             for (int j = 0; j < 5; j++) {
                 if (i != 2 || j != 2) {
                     final CellType cellType = ((i == 0 && (j == 2)) || (i == 1 && (j == 1 || j == 3)) || (i == 2 && (j == 0 || j == 4)) || (i == 3 && (j == 1 || j == 3)) || (i == 4 && j == 2)) ? CellType.sand1 : CellType.empty;
                     final CellContent cellContent = deck.pick();
-                    final ObjectType objectType;
                     final ArrayList<Integer> players = new ArrayList<Integer>();
-
-                    if (cellContent == CellContent.crash || cellContent == CellContent.tunnel || cellContent == CellContent.equipment) {
-                        objectType = objects.get(idx);
-                        idx++;
-
-                    } else {
-                        objectType = ObjectType.none;
-                    }
-                    this.board[i][j] = new Cell(cellType, players, cellContent, objectType);
+                    this.board[i][j] = new Cell(cellType, players, cellContent);
                 } else {
-                    this.board[i][j] = new Cell(CellType.eye, new ArrayList<Integer>(), CellContent.none, ObjectType.none);
+                    this.board[i][j] = new Cell(CellType.eye, new ArrayList<Integer>(), CellContent.none);
                 }
                 this.board[i][j].addObserver(this);
             }
@@ -136,6 +104,11 @@ public class Board extends Observable implements Observer {
                 }
             }
         }
+        notifyObservers();
+    }
+
+    public void removeSand(Coord c) {
+        this.getCell(c).removeSand();
         notifyObservers();
     }
 

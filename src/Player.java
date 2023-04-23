@@ -1,5 +1,6 @@
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.Set;
 
 public class Player extends Observable {
     private static Color[] colors = {Color.green, Color.pink, Color.cyan, Color.red, Color.blue};
@@ -58,6 +59,14 @@ public class Player extends Observable {
         return this.waterLevel;
     }
 
+    public int getRemainingActions() {
+        return this.maxActions - this.actionsDone;
+    }
+
+    public ArrayList<Equipment> getEquipment() {
+        return this.objects;
+    }
+
     public int increaseWaterLevel(int v) {
         this.waterLevel += v;
         return this.waterLevel;
@@ -77,7 +86,68 @@ public class Player extends Observable {
     }
 
     public ArrayList<Coord> getAvailableCells(Board b, PlayerAction action) {
-        return new ArrayList<Coord>();
+        final ArrayList<Coord> arr = new ArrayList<Coord>();
+        if (action == PlayerAction.move) {
+            if (this.position.x > 0) {
+                final Coord tmp = new Coord(this.position.x -1, this.position.y);
+                if (tmp != b.getOeil()) {
+                    arr.add(tmp);
+                }
+            }
+            if (this.position.x < 4) {
+                final Coord tmp = new Coord(this.position.x + 1, this.position.y);
+                if (tmp != b.getOeil()) {
+                    arr.add(tmp);
+                }
+            }
+            if (this.position.y > 0) {
+                final Coord tmp = new Coord(this.position.x, this.position.y - 1);
+                if (tmp != b.getOeil()) {
+                    arr.add(tmp);
+                }
+            }
+            if (this.position.y < 4) {
+                final Coord tmp = new Coord(this.position.x, this.position.y + 1);
+                if (tmp != b.getOeil()) {
+                    arr.add(tmp);
+                }
+            }
+        } else if (action == PlayerAction.removeSand) {
+            if (this.position.x > 0) {
+                final Coord tmp = new Coord(this.position.x -1, this.position.y);
+                if (tmp != b.getOeil()) {
+                    arr.add(tmp);
+                }
+            }
+            if (this.position.x < 4) {
+                final Coord tmp = new Coord(this.position.x + 1, this.position.y);
+                if (tmp != b.getOeil()) {
+                    arr.add(tmp);
+                }
+            }
+            if (this.position.y > 0) {
+                final Coord tmp = new Coord(this.position.x, this.position.y - 1);
+                if (tmp != b.getOeil()) {
+                    arr.add(tmp);
+                }
+            }
+            if (this.position.y < 4) {
+                final Coord tmp = new Coord(this.position.x, this.position.y + 1);
+                if (tmp != b.getOeil()) {
+                    arr.add(tmp);
+                }
+            }
+        }
+        return arr;
+    }
+
+    public boolean isCellAvailable(Board b, PlayerAction action, Coord coord) {
+        for (Coord c: this.getAvailableCells(b, action)) {
+            if (c.x == coord.x && c.y == coord.y) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public PlayerType getType() {

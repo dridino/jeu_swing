@@ -5,20 +5,17 @@ public class Cell extends Observable {
     private CellType type;
     private ArrayList<Integer> playerIds = new ArrayList<Integer>();
     private CellContent content;
-    private ObjectType objectType;
     private boolean equipmentPicked = false;
 
-    public Cell(CellType type, ArrayList<Integer> players, CellContent content, ObjectType objectType) {
+    public Cell(CellType type, ArrayList<Integer> players, CellContent content) {
         this.type = type;
         this.playerIds.addAll(players);
         this.content = content;
-        this.objectType = objectType;
-        System.out.println(this.playerIds);
         notifyObservers();
     }
 
     public Cell copy() {
-        return new Cell(this.type, this.playerIds, this.content, this.objectType);
+        return new Cell(this.type, this.playerIds, this.content);
     }
 
     public CellType getType() {
@@ -39,12 +36,9 @@ public class Cell extends Observable {
         return this.content;
     }
 
-    public ObjectType getObjectType() {
-        return this.objectType;
-    }
-
     public void pickEquipment() {
         this.equipmentPicked = true;
+        notifyObservers();
     }
 
     public List<Integer> getPlayerIds() {
@@ -53,19 +47,23 @@ public class Cell extends Observable {
 
     public void addPlayer(int id) {
         this.playerIds.add(id);
+        notifyObservers();
     }
 
     public void removePlayer(int id) {
         this.playerIds.removeIf(p -> p == id);
+        notifyObservers();
     }
 
     public int addSand() {
         switch (this.type) {
             case empty:
                 this.type = CellType.sand1;
+                notifyObservers();
                 return 1;
             case sand1:
                 this.type = CellType.sand2;
+                notifyObservers();
                 return 1;
             default:
                 return 0;
@@ -76,12 +74,18 @@ public class Cell extends Observable {
         switch (this.type) {
             case sand1:
                 this.type = CellType.empty;
+                notifyObservers();
                 return -1;
             case sand2:
                 this.type = CellType.sand1;
+                notifyObservers();
                 return -1;
             default:
                 return 0;
         }
+    }
+
+    public boolean containsEquipment() {
+        return this.content == CellContent.equipment || this.content == CellContent.crash || this.content == CellContent.tunnel;
     }
 }

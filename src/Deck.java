@@ -11,6 +11,14 @@ public class Deck<E> {
         this.type = type;
     }
 
+    public boolean isEmpty() {
+        return this.elements.isEmpty();
+    }
+
+    public boolean isNotEmpty() {
+        return !this.isEmpty();
+    }
+
     public DeckType getType() {
         return this.type;
     }

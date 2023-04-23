@@ -14,4 +14,8 @@ public class Coord {
     public void setY(int y) {
         this.y = y;
     }
+
+    public String toString() {
+        return "Coord(x: " + this.x + ", y: " + this.y + ")";
+    }
 }
