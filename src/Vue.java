@@ -61,7 +61,9 @@ public class Vue implements Observer {
                 break;
             case game:
                 this.frame.getContentPane().add(new ThirdScreen(this.game), new GridBagConstraints());
-            default:
+                break;
+            case end:
+                this.frame.getContentPane().add(new FinalScreen(this.game), new GridBagConstraints());
                 break;
         }
     }
@@ -277,14 +279,16 @@ class GridPart extends JPanel {
         this.addMouseListener(new MouseListener() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                final Coord coord = new Coord(e.getPoint().y / TAILLE, e.getPoint().x / TAILLE);
-                if (e.getModifiersEx() == 0) {
-                    if (game.getCurrentPlayer().isCellAvailable(game.getBoard(), PlayerAction.move, coord)) {
-                        game.movePlayer(game.getCurrentPlayerId(), coord);
-                    }
-                } else if (e.getModifiersEx() == 256) {
-                    if (game.getCurrentPlayer().isCellAvailable(game.getBoard(), PlayerAction.removeSand, coord)) {
-                        game.removeSand(coord);
+                if (game.isPlayerTurn()) {
+                    final Coord coord = new Coord(e.getPoint().y / TAILLE, e.getPoint().x / TAILLE);
+                    if (e.getModifiersEx() == 0) {
+                        if (game.getCurrentPlayer().isCellAvailable(game.getBoard(), PlayerAction.move, coord)) {
+                            game.movePlayer(game.getCurrentPlayerId(), coord);
+                        }
+                    } else if (e.getModifiersEx() == 256) {
+                        if (game.getCurrentPlayer().isCellAvailable(game.getBoard(), PlayerAction.removeSand, coord)) {
+                            game.removeSand(coord);
+                        }
                     }
                 }
             }
@@ -330,7 +334,7 @@ class GridPart extends JPanel {
                  * On lui fournit les informations de dessin [g] et les
                  * coordonnées du coin en haut à gauche.
                  */
-                paint(g, game.getBoard().getCell(new Coord(i, j)), (j)*TAILLE, (i)*TAILLE);
+                paint(g, game.getBoard().getCell(new Coord(i, j)), new Coord(i, j), (j)*TAILLE, (i)*TAILLE);
             }
         }
     }
@@ -341,7 +345,7 @@ class GridPart extends JPanel {
      * [CModele.Cellule].
      * Ceci serait impossible si [Cellule] était déclarée privée dans [CModele].
      */
-    private void paint(Graphics g, Cell c, int x, int y) {
+    private void paint(Graphics g, Cell c, Coord coord, int x, int y) {
         /** Sélection d'une couleur. */
         final Color col;
         switch (c.getType()) {
@@ -363,10 +367,19 @@ class GridPart extends JPanel {
         g.fillRect(x, y, TAILLE, TAILLE);
         g.setColor(Color.white);
         g.drawRect(x, y, TAILLE, TAILLE);
+        if (this.game.getCurrentPlayer().isCellAvailable(this.game.getBoard(), PlayerAction.move, coord)) {
+            g.setColor(Color.green);
+            g.drawRect(x + 1, y + 1, TAILLE - 2, TAILLE - 2);
+        }
 
         if (c.getContent() == CellContent.mirage || c.getContent() == CellContent.oasis) {
             g.setColor(Color.blue);
             g.fillOval(x + TAILLE - 20, y + 5, 15, 15);
+        }
+
+        if (c.isExplored()) {
+            g.setColor(Color.black);
+            g.drawString(c.getContent().toString(), x + 5, y + TAILLE/2);
         }
 
         // joueur
@@ -383,32 +396,9 @@ class GridPart extends JPanel {
 
 class ThirdScreenLeftPanel extends JPanel {
     private final Game game;
-    private final Deck<ObjectType> deck;
 
     public ThirdScreenLeftPanel(Game game) {
         this.game = game;
-        final ArrayList<ObjectType> arr = new ArrayList<ObjectType>();
-        final ObjectType[] values = {
-                ObjectType.blaster,
-                ObjectType.blaster,
-                ObjectType.blaster,
-
-                ObjectType.jetpack,
-                ObjectType.jetpack,
-                ObjectType.jetpack,
-
-                ObjectType.shield,
-                ObjectType.shield,
-
-                ObjectType.xRay,
-                ObjectType.xRay,
-
-                ObjectType.time,
-
-                ObjectType.water,
-        };
-        Collections.addAll(arr, values);
-        this.deck = new Deck<ObjectType>(arr, DeckType.equipmentType);
         this.build();
     }
 
@@ -421,14 +411,13 @@ class ThirdScreenLeftPanel extends JPanel {
             @Override
             public void mouseClicked(MouseEvent me) {
                 super.mouseClicked(me);
-                if (deck.isNotEmpty()) {
-                    final Equipment object = new Equipment(deck.pick());
-                    game.getCurrentPlayer().addObject(object);
-                    JOptionPane.showMessageDialog(null, object.getName(), "Equipement", JOptionPane.INFORMATION_MESSAGE);
+                if (game.isEquipmentTurn()) {
+                    final Equipment equipment = game.pickEquipment();
+                    JOptionPane.showMessageDialog(null, equipment.getName(), "Equipement", JOptionPane.INFORMATION_MESSAGE);
                 }
             }
         };
-        this.add(new DeckLayout<ObjectType>(deck, deckMouseAdapter, "Paquet", "Equipement"));
+        this.add(new DeckLayout<ObjectType>(game.getEquipmentDeck(), deckMouseAdapter, "Paquet", "Equipement"));
 
         // TEXT
         final JTextArea sandText = new JTextArea("Total Sable : " + this.game.getBoard().getSandLevel());
@@ -603,9 +592,14 @@ class ThirdScreenRightPanel extends JPanel {
             @Override
             public void mouseClicked(MouseEvent me) {
                 super.mouseClicked(me);
-                if (deck.isNotEmpty()) {
-                    final StormAction action = deck.pick();
-                    JOptionPane.showMessageDialog(null, action, "Pioche", JOptionPane.INFORMATION_MESSAGE);
+                if (game.isStormTurn()) {
+                    if (deck.isNotEmpty()) {
+                        final StormAction action = deck.pick();
+                        game.handleStormEvents(action);
+                    } else {
+                        deck.addAll(game.getDefausse().getAll());
+                        game.resetDefausse();
+                    }
                 }
             }
         };
@@ -616,25 +610,38 @@ class ThirdScreenRightPanel extends JPanel {
             @Override
             public void mouseClicked(MouseEvent me) {
                 super.mouseClicked(me);
-                JOptionPane.showMessageDialog(null, "Défausse", "Défausse", JOptionPane.INFORMATION_MESSAGE);
-
+                game.resetPickedCards();
+                String message = "<html>";
+                for (StormAction sa: game.getDefausse().getAll()) {
+                    message += sa.toString() + "<br>";
+                }
+                message += "</html>";
+                JOptionPane.showMessageDialog(null, message, "Défausse", JOptionPane.INFORMATION_MESSAGE);
             }
         };
 
-        topPanel.add(new DeckLayout<StormAction>(this.deck, defausseAdapter, "Défausse", ""));
+        topPanel.add(new DeckLayout<StormAction>(this.deck, defausseAdapter, "Défausse", "" + (game.getDefausse().isNotEmpty() ? game.getDefausse().getFirst() : "")));
 
         this.add(topPanel);
 
         final JButton exploreButton = new JButton("Exploration");
+        exploreButton.setEnabled(this.game.getBoard().getCell(this.game.getCurrentPlayer().getPosition()).getType() == CellType.empty && this.game.isPlayerTurn());
         exploreButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 System.out.println("explore");
+                if (!game.getBoard().getCell(game.getCurrentPlayer().getPosition()).isExplored()) {
+                    final CellContent content = game.explore();
+                    if (content == CellContent.equipment || content == CellContent.crash || content == CellContent.tunnel) {
+                        game.setTurn(Turn.equipment);
+                    }
+                }
             }
         });
         this.add(exploreButton);
 
         final JButton takeButton = new JButton("Prendre une pièce");
+        takeButton.setEnabled(this.game.getBoard().getCell(this.game.getCurrentPlayer().getPosition()).getType() == CellType.empty && this.game.isPlayerTurn());
         takeButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -644,10 +651,16 @@ class ThirdScreenRightPanel extends JPanel {
         this.add(takeButton);
 
         final JButton endTurnButton = new JButton("Fin de Tour");
+        endTurnButton.setEnabled(this.game.isPlayerTurn());
         endTurnButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 System.out.println("fin de tour");
+                if (game.isPlayerTurn()) {
+                    game.endOfTurn();
+                } else {
+                    game.newTurn();
+                }
             }
         });
         this.add(endTurnButton);
@@ -663,25 +676,67 @@ class ThirdScreenRightPanel extends JPanel {
         playerPanel.setBackground(Color.white);
         this.add(playerPanel);
 
-        final JTextArea text1 = new JTextArea("Phase d'action, vous pouvez faire 4");
-        text1.setEditable(false);
-        final JTextArea text2 = new JTextArea("actions parmis :");
-        text2.setEditable(false);
-        final JTextArea text3 = new JTextArea("- Déplacement de 1 case (clic gauche)");
-        text3.setEditable(false);
-        final JTextArea text4 = new JTextArea("- Désensabler 1 case (clic droit)");
-        text4.setEditable(false);
-        final JTextArea text5 = new JTextArea("- Explorer une case");
-        text5.setEditable(false);
-        final JTextArea text6 = new JTextArea("- Prendre une pièce");
-        text6.setEditable(false);
+        if (this.game.isPlayerTurn()) {
+            final JTextArea text1 = new JTextArea("Phase d'action, vous pouvez faire 4");
+            text1.setEditable(false);
+            final JTextArea text2 = new JTextArea("actions parmis :");
+            text2.setEditable(false);
+            final JTextArea text3 = new JTextArea("- Déplacement de 1 case (clic gauche)");
+            text3.setEditable(false);
+            final JTextArea text4 = new JTextArea("- Désensabler 1 case (clic droit)");
+            text4.setEditable(false);
+            final JTextArea text5 = new JTextArea("- Explorer une case");
+            text5.setEditable(false);
+            final JTextArea text6 = new JTextArea("- Prendre une pièce");
+            text6.setEditable(false);
 
-        this.add(text1);
-        this.add(text2);
-        this.add(text3);
-        this.add(text4);
-        this.add(text5);
-        this.add(text6);
+            this.add(text1);
+            this.add(text2);
+            this.add(text3);
+            this.add(text4);
+            this.add(text5);
+            this.add(text6);
+        } else if (game.isStormTurn()) {
+            final JTextArea text1 = new JTextArea("Phase de la tempête");
+            text1.setEditable(false);
+            final JTextArea text2 = new JTextArea("Piochez un nombre de cartes de");
+            text2.setEditable(false);
+            final JTextArea text3 = new JTextArea("tempête égal niveau de la tempête");
+            text3.setEditable(false);
+            final JTextArea text4 = new JTextArea("Restant à piocher : " + (int) (Math.floor(this.game.getBoard().getStormLevel()) - this.game.getPickedCards()) + " carte(s)");
+            text4.setEditable(false);
+
+            this.add(text1);
+            this.add(text2);
+            this.add(text3);
+            this.add(text4);
+        } else {
+            final JTextArea text1 = new JTextArea("Phase Equipement");
+            text1.setEditable(false);
+            final JTextArea text2 = new JTextArea("Piochez une carte équipement.");
+            text2.setEditable(false);
+
+            this.add(text1);
+            this.add(text2);
+        }
+
+    }
+}
+
+class FinalScreen extends JPanel {
+    final Game game;
+    public FinalScreen(Game game) {
+        this.game = game;
+        this.setBackground(Color.white);
+        this.setLayout(new FlowLayout());
+        final JTextArea text;
+        if (this.game.getGameResults() == GameResults.win) {
+            text = new JTextArea("VICTOIRE !");
+        } else {
+            text = new JTextArea("DEFAITE...");
+        }
+        text.setEditable(false);
+        this.add(text);
     }
 }
 
@@ -775,10 +830,11 @@ class PlayerCard extends JPanel {
         final ActionListener equipmentListener = new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String message = "";
+                String message = "<html>";
                 for (Equipment equip: player.getEquipment()) {
-                    message += (equip.getName() + "\n");
+                    message += (equip.getName() + "<br>");
                 }
+                message += "</html>";
                 JOptionPane.showMessageDialog(null, message, "Equipement", JOptionPane.INFORMATION_MESSAGE);
             }
         };

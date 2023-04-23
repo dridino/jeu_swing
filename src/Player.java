@@ -6,7 +6,7 @@ public class Player extends Observable {
     private static Color[] colors = {Color.green, Color.pink, Color.cyan, Color.red, Color.blue};
     private int id;
     private String pseudo;
-    private int waterLevel;
+    private double waterLevel;
     private Coord position;
     private PlayerType type;
     private int actionsDone;
@@ -55,7 +55,7 @@ public class Player extends Observable {
         return this.pseudo;
     }
 
-    public int getWaterLevel() {
+    public double getWaterLevel() {
         return this.waterLevel;
     }
 
@@ -67,12 +67,12 @@ public class Player extends Observable {
         return this.objects;
     }
 
-    public int increaseWaterLevel(int v) {
+    public double increaseWaterLevel(int v) {
         this.waterLevel += v;
         return this.waterLevel;
     }
 
-    public int decreaseWaterLevel(int v) {
+    public double decreaseWaterLevel(double v) {
         this.waterLevel -= v;
         return this.waterLevel;
     }
@@ -113,6 +113,7 @@ public class Player extends Observable {
                 }
             }
         } else if (action == PlayerAction.removeSand) {
+            arr.add(this.position);
             if (this.position.x > 0) {
                 final Coord tmp = new Coord(this.position.x -1, this.position.y);
                 if (tmp != b.getOeil()) {
@@ -138,6 +139,8 @@ public class Player extends Observable {
                 }
             }
         }
+        final Coord oeil = b.getOeil();
+        arr.removeIf(c -> c.x == oeil.x && c.y == oeil.y);
         return arr;
     }
 

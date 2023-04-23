@@ -1,7 +1,7 @@
 import java.util.ArrayList;
 import java.util.Collections;
 
-public class Deck<E> {
+public class Deck<E> extends Observable {
     private ArrayList<E> elements;
     private DeckType type;
 
@@ -17,6 +17,29 @@ public class Deck<E> {
 
     public boolean isNotEmpty() {
         return !this.isEmpty();
+    }
+
+    public void add(E elem) {
+        this.elements.add(elem);
+        notifyObservers();
+    }
+
+    public E getFirst() {
+        return this.elements.get(this.getRemaining() - 1);
+    }
+
+    public ArrayList<E> getAll() {
+        return this.elements;
+    }
+
+    public void reset() {
+        this.elements.removeIf(e -> true);
+    }
+
+    public void addAll(ArrayList<E> elements) {
+        Collections.shuffle(elements);
+        this.elements.addAll(elements);
+        notifyObservers();
     }
 
     public DeckType getType() {

@@ -5,6 +5,8 @@ public class Cell extends Observable {
     private CellType type;
     private ArrayList<Integer> playerIds = new ArrayList<Integer>();
     private CellContent content;
+
+    private boolean isExplored = false;
     private boolean equipmentPicked = false;
 
     public Cell(CellType type, ArrayList<Integer> players, CellContent content) {
@@ -22,6 +24,14 @@ public class Cell extends Observable {
         return this.type;
     }
 
+    public boolean isExplored() {
+        return this.isExplored;
+    }
+
+    public void explore() {
+        this.isExplored = true;
+        notifyObservers();
+    }
 
     public void setType(CellType t) {
         this.type = t;

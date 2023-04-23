@@ -30,15 +30,15 @@ public class Board extends Observable implements Observer {
 
                 CellContent.takeoff,
 
-                CellContent.clueRow,
-                CellContent.clueRow,
-                CellContent.clueRow,
-                CellContent.clueRow,
+                CellContent.clueRowEngine,
+                CellContent.clueRowWheel,
+                CellContent.clueRowEnergy,
+                CellContent.clueRowRotor,
 
-                CellContent.clueColumn,
-                CellContent.clueColumn,
-                CellContent.clueColumn,
-                CellContent.clueColumn,
+                CellContent.clueColumnEngine,
+                CellContent.clueColumnWheel,
+                CellContent.clueColumnEnergy,
+                CellContent.clueColumnRotor,
         };
 
         Collections.addAll(contents, values1);
@@ -169,9 +169,9 @@ public class Board extends Observable implements Observer {
     }
 
     public void switchCases(Coord c1, Coord c2) {
-        final Cell tmp = this.board[c1.x][c1.y];
-        this.board[c1.x][c1.y] = this.board[c1.x][c1.y].copy();
-        this.board[c2.x][c2.y] = tmp.copy();
+        final Cell tmp = this.board[c1.x][c1.y].copy();
+        this.board[c1.x][c1.y] = this.board[c2.x][c2.y].copy();
+        this.board[c2.x][c2.y] = tmp;
     }
 
     public void sandstorm() {
@@ -226,6 +226,95 @@ public class Board extends Observable implements Observer {
             }
         }
         this.notifyObservers();
+    }
+
+    public void moveNorth(int n) {
+        int i = 0;
+        while (this.getOeil().x < 4 && i < n) {
+            final Coord newCoord = new Coord(this.getOeil().x+1, this.getOeil().y);
+            this.getCell(newCoord).addSand();
+            this.switchCases(newCoord, this.getOeil());
+            i++;
+        }
+    }
+
+    public void moveSouth(int n) {
+        int i = 0;
+        while (this.getOeil().x > 0 && i < n) {
+            final Coord newCoord = new Coord(this.getOeil().x-1, this.getOeil().y);
+            this.getCell(newCoord).addSand();
+            this.switchCases(newCoord, this.getOeil());
+            i++;
+        }
+    }
+
+    public void moveEast(int n) {
+        int i = 0;
+        while (this.getOeil().y > 0 && i < n) {
+            final Coord newCoord = new Coord(this.getOeil().x, this.getOeil().y - 1);
+            this.getCell(newCoord).addSand();
+            this.switchCases(newCoord, this.getOeil());
+            i++;
+        }
+    }
+
+    public void moveWest(int n) {
+        int i = 0;
+        while (this.getOeil().y < 4 && i < n) {
+            final Coord newCoord = new Coord(this.getOeil().x, this.getOeil().y + 1);
+            this.getCell(newCoord).addSand();
+            this.switchCases(newCoord, this.getOeil());
+            i++;
+        }
+    }
+
+    public void unleash() {
+        this.stormLevel += 0.5;
+    }
+
+    public void handleStormEvents(StormAction action) {
+        switch (action) {
+            case north1:
+                this.moveNorth(1);
+                break;
+            case north2:
+                this.moveNorth(2);
+                break;
+            case north3:
+                this.moveNorth(3);
+                break;
+            case south1:
+                this.moveSouth(1);
+                break;
+            case south2:
+                this.moveSouth(2);
+                break;
+            case south3:
+                this.moveSouth(3);
+                break;
+            case west1:
+                this.moveWest(1);
+                break;
+            case west2:
+                this.moveWest(2);
+                break;
+            case west3:
+                this.moveWest(3);
+                break;
+            case east1:
+                this.moveEast(1);
+                break;
+            case east2:
+                this.moveEast(2);
+                break;
+            case east3:
+                this.moveEast(3);
+                break;
+            case unleash:
+                this.unleash();
+                break;
+        }
+        notifyObservers();
     }
 
     public void movePlayer(Coord coord1, Coord coord2, int pid) {
