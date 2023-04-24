@@ -1,4 +1,4 @@
-import java.util.ArrayList; 
+import java.util.ArrayList;  
 import java.util.Collections;
 
 public class Game extends Observable implements Observer {
