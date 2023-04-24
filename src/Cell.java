@@ -16,6 +16,10 @@ public class Cell extends Observable {
         notifyObservers();
     }
 
+    public boolean is(Cell c) {
+        return this.type == c.type && this.playerIds == c.playerIds && this.content == c.content;
+    }
+
     public Cell copy() {
         return new Cell(this.type, this.playerIds, this.content);
     }

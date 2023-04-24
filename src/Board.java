@@ -107,8 +107,10 @@ public class Board extends Observable implements Observer {
         notifyObservers();
     }
 
-    public void removeSand(Coord c) {
-        this.getCell(c).removeSand();
+    public void removeSand(Coord c, int n) {
+        for (int i = 0; i < n; i++) {
+            this.getCell(c).removeSand();
+        }
         notifyObservers();
     }
 

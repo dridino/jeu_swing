@@ -372,6 +372,11 @@ class GridPart extends JPanel {
             g.drawRect(x + 1, y + 1, TAILLE - 2, TAILLE - 2);
         }
 
+        if (this.game.getCurrentPlayer().isCellAvailable(this.game.getBoard(), PlayerAction.removeSand, coord)) {
+            g.setColor(Color.blue);
+            g.drawRect(x + 1, y + 1, TAILLE - 2, TAILLE - 2);
+        }
+
         if (c.getContent() == CellContent.mirage || c.getContent() == CellContent.oasis) {
             g.setColor(Color.blue);
             g.fillOval(x + TAILLE - 20, y + 5, 15, 15);
@@ -442,9 +447,31 @@ class ThirdScreenLeftPanel extends JPanel {
 
         this.add(stormLevel);
 
+        // PLAYERS
+        final JPanel playerPanel = new JPanel();
+        playerPanel.setBackground(Color.white);
+        playerPanel.setLayout(new FlowLayout());
+
+        final JPanel playerPanel1 = new JPanel();
+        playerPanel1.setBackground(Color.white);
+        playerPanel1.setLayout(new BoxLayout(playerPanel1, BoxLayout.PAGE_AXIS));
+
+        final JPanel playerPanel2 = new JPanel();
+        playerPanel2.setBackground(Color.white);
+        playerPanel2.setLayout(new BoxLayout(playerPanel2, BoxLayout.PAGE_AXIS));
+
+        int i = 0;
         for (Player p: this.game.getPlayers()) {
-            this.add(new PlayerCard(this.game, p));
+            if (i < 3) {
+                playerPanel1.add(new PlayerCard(this.game, p));
+            } else {
+                playerPanel2.add(new PlayerCard(this.game, p));
+            }
+            i++;
         }
+        playerPanel.add(playerPanel1);
+        playerPanel.add(playerPanel2);
+        this.add(playerPanel);
     }
 }
 
@@ -594,11 +621,17 @@ class ThirdScreenRightPanel extends JPanel {
                 super.mouseClicked(me);
                 if (game.isStormTurn()) {
                     if (deck.isNotEmpty()) {
-                        final StormAction action = deck.pick();
-                        game.handleStormEvents(action);
+                        if (game.getPickedCards() < Math.floor(game.getBoard().getStormLevel())) {
+                            final StormAction action = deck.pick();
+                            game.handleStormEvents(action);
+                        }
                     } else {
                         deck.addAll(game.getDefausse().getAll());
                         game.resetDefausse();
+                        if (game.getPickedCards() < Math.floor(game.getBoard().getStormLevel())) {
+                            final StormAction action = deck.pick();
+                            game.handleStormEvents(action);
+                        }
                     }
                 }
             }
@@ -797,7 +830,7 @@ class PlayerCard extends JPanel {
         this.setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         this.setBackground(Color.white);
         this.setBorder(BorderFactory.createLineBorder(this.player.getColor(), 4));
-        this.setPreferredSize(new Dimension(160, 120));
+        this.setPreferredSize(new Dimension(180, 140));
 
         // JOUEUR
         final JTextArea playerArea = new JTextArea("Joueur : " + this.player.getPseudo());
@@ -823,9 +856,12 @@ class PlayerCard extends JPanel {
         this.add(actionArea);
 
         // WATER
-        final JTextArea waterArea = new JTextArea("Niveau d'eau : " + this.player.getWaterLevel() + " (max d'eau: " + this.player.getMaxWater() + ")");
+        final JTextArea waterArea = new JTextArea("Niveau d'eau : " + this.player.getWaterLevel());
         waterArea.setEditable(false);
         this.add(waterArea);
+        final JTextArea waterArea2 = new JTextArea("(max d'eau: " + this.player.getMaxWater() + ")");
+        waterArea2.setEditable(false);
+        this.add(waterArea2);
 
         final ActionListener equipmentListener = new ActionListener() {
             @Override
@@ -838,7 +874,7 @@ class PlayerCard extends JPanel {
                 JOptionPane.showMessageDialog(null, message, "Equipement", JOptionPane.INFORMATION_MESSAGE);
             }
         };
-        final JButton equipmentButton = new JButton("Inventaire (nombre: " + this.player.getEquipment().size() + ")");
+        final JButton equipmentButton = new JButton("Inventaire (" + this.player.getEquipment().size() + ")");
         equipmentButton.addActionListener(equipmentListener);
         this.add(equipmentButton);
     }

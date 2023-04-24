@@ -164,7 +164,7 @@ public class Game extends Observable implements Observer {
             return;
         }
         player.increaseActions(PlayerAction.removeSand);
-        this.board.getCell(c).removeSand();
+        this.board.removeSand(c, player.getMaxSandRemove());
         if (player.getRemainingActions() == 0) {
             this.endOfTurn();
         }
@@ -223,25 +223,26 @@ public class Game extends Observable implements Observer {
 
     public void heatWave() {
         for (Player p: this.players) {
-            p.decreaseWaterLevel(0.5);
+            final Coord pCoord = p.getPosition();
+            if (this.board.getCell(pCoord).getContent() != CellContent.tunnel || !this.board.getCell(pCoord).isExplored()) {
+                p.decreaseWaterLevel(0.5);
+            }
         }
         this.updateGameResult();
     }
 
     public void handleStormEvents(StormAction action) {
-        if (this.pickedCards < Math.floor(this.board.getStormLevel())) {
-            this.defausse.add(action);
-            this.increasePickCards();
-            if (action == StormAction.heatwave) {
-                this.heatWave();
-            }
-            this.board.handleStormEvents(action);
+        this.defausse.add(action);
+        this.increasePickCards();
+        if (action == StormAction.heatwave) {
+            this.heatWave();
         }
+        this.board.handleStormEvents(action);
+        this.updateGameResult();
+        this.notifyObservers();
         if (this.pickedCards == Math.floor(this.board.getStormLevel())) {
             this.newTurn();
         }
-        this.updateGameResult();
-        this.notifyObservers();
     }
 
     public void newTurn() {
@@ -249,6 +250,24 @@ public class Game extends Observable implements Observer {
         this.currentPlayer = (this.currentPlayer + 1)%this.numberOfPlayers;
         this.turn = Turn.player;
         notifyObservers();
+    }
+
+    private boolean inLine(CellContent content) {
+        for (int j = 0; j < 5; j++) {
+            if (this.board.getCell(new Coord(this.getCurrentPlayer().getPosition().x, j)).getContent() == content) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean inColumn(CellContent content) {
+        for (int i = 0; i < 5; i++) {
+            if (this.board.getCell(new Coord(i, this.getCurrentPlayer().getPosition().y)).getContent() == content) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public CellContent explore() {

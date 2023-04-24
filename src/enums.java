@@ -1,12 +1,14 @@
 enum CellType {empty, sand1, sand2, eye}
 
-enum CellContent {oasis, mirage, tunnel, crash, takeoff, clueRowEngine, clueRowWheel, clueRowEnergy, clueRowRotor, clueColumnEngine, clueColumnWheel, clueColumnEnergy, clueColumnRotor, equipment, none};
+enum CellContent {oasis, mirage, tunnel, crash, takeoff, clueRowEngine, clueRowWheel, clueRowEnergy, clueRowRotor, clueColumnEngine, clueColumnWheel, clueColumnEnergy, clueColumnRotor, engine, wheel, energy, rotor, equipment, none};
+
+enum DeplacementType {straight, diagonal}
 
 enum PlayerType {archeo, alpinist, explo, meteo, navig, water}
 
 enum ObjectType {jetpack, shield, blaster, xRay, time, water, none}
 
-enum PlayerAction {removeSand, move, discover, pickUp}
+enum PlayerAction {removeSand, move, discover, pickUp, giveWater}
 
 enum StormAction {east1, east2, east3, west1, west2, west3, north1, north2, north3, south1, south2, south3, heatwave, unleash}
 
