@@ -115,7 +115,6 @@ class FirstScreen extends JPanel {
 
 class SecondScreen extends JPanel {
     private final Game game;
-    private final Deck<PlayerType> deck;
     private String pseudo;
 
     private JTextArea text;
@@ -123,13 +122,9 @@ class SecondScreen extends JPanel {
     private DeckLayout<PlayerType> deckLayout;
     private JButton button;
     private PlayerType playerType;
-    private int i = 0;
 
     public SecondScreen(Game g) {
         this.game = g;
-        final ArrayList<PlayerType> types = new ArrayList<>();
-        Collections.addAll(types, PlayerType.values());
-        this.deck = new Deck<PlayerType>(types, DeckType.playerType);
         this.build();
     }
 
@@ -143,16 +138,16 @@ class SecondScreen extends JPanel {
         this.add(text);
 
         // TEXTFIELD
-        this.textField = new JTextField("");
+        this.textField = new JTextField(game.getPlayerPseudo());
         this.textField.getDocument().addDocumentListener(new DocumentListener() {
             public void changedUpdate(DocumentEvent e) {
-                pseudo = textField.getText();
+                game.setPlayerPseudo(textField.getText());
             }
             public void removeUpdate(DocumentEvent e) {
-                pseudo = textField.getText();
+                game.setPlayerPseudo(textField.getText());
             }
             public void insertUpdate(DocumentEvent e) {
-                pseudo = textField.getText();
+                game.setPlayerPseudo(textField.getText());
             }
         });
         this.textField.setPreferredSize(new Dimension(200, 25));
@@ -164,26 +159,28 @@ class SecondScreen extends JPanel {
             @Override
             public void mouseClicked(MouseEvent me) {
                 super.mouseClicked(me);
-                if (playerType == null) {
-                    playerType = deck.pick();
-                    final Role role = new Role(playerType);
+                if (game.getPlayerType() == null) {
+                    game.setPlayerType(game.getPlayerTypeDeck().pick());
+                    final Role role = new Role(game.getPlayerType());
                     JOptionPane.showMessageDialog(null, role.getDescription(), "Pioche", JOptionPane.INFORMATION_MESSAGE);
+                    game.update();
                 }
             }
         };
-        this.deckLayout = new DeckLayout<PlayerType>(this.deck, mouseAdapter, "Paquet", "Aventurier");
+        this.deckLayout = new DeckLayout<PlayerType>(this.game.getPlayerTypeDeck(), mouseAdapter, "Paquet", "Aventurier");
         this.add(this.deckLayout);
 
         // BUTTON
         final JButton button = new JButton("Suivant");
+        button.setEnabled(this.game.getPlayerType() != null);
         final ActionListener actionListener = new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                game.addPlayer(new Player(i, pseudo, null, playerType));
-                if (i < game.getNumberOfPlayers() - 1) {
-                    textField.setText("");
-                    playerType = null;
-                    i++;
+                game.addPlayer(new Player(game.getPlayers().size(), game.getPlayerPseudo(), null, game.getPlayerType()));
+                if (game.getPlayers().size() < game.getNumberOfPlayers()) {
+                    game.setPlayerPseudo(null);
+                    game.setPlayerType(null);
+                    game.update();
                 } else {
                     game.nextScreen();
                 }
@@ -378,7 +375,11 @@ class GridPart extends JPanel {
         }
 
         if (c.getContent() == CellContent.mirage || c.getContent() == CellContent.oasis) {
-            g.setColor(Color.blue);
+            if (c.isWaterConsumed() && c.getContent() == CellContent.oasis) {
+                g.setColor(new Color(25, 35, 120));
+            } else {
+                g.setColor(Color.blue);
+            }
             g.fillOval(x + TAILLE - 20, y + 5, 15, 15);
         }
 
@@ -395,6 +396,24 @@ class GridPart extends JPanel {
             g.setColor(p.getColor());
             g.fillRect(x+5 + i*(t+5), y+TAILLE-5-t, t, t);
             i++;
+        }
+
+        // PIECE
+        if (c.getPiece() != null) {
+            switch (c.getPiece()) {
+                case engine:
+                    this.add(new EngineLogo());
+                    break;
+                case wheel:
+                    this.add(new WheelLogo());
+                    break;
+                case energy:
+                    this.add(new EnergyLogo());
+                    break;
+                case rotor:
+                    this.add(new RotorLogo());
+                    break;
+            }
         }
     }
 }
@@ -593,14 +612,14 @@ class ThirdScreenRightPanel extends JPanel {
             StormAction.west2,
             StormAction.west3,
 
-            StormAction.heatwave,
-            StormAction.heatwave,
-            StormAction.heatwave,
-            StormAction.heatwave,
+            StormAction.VAGUE_CHALEUR,
+            StormAction.VAGUE_CHALEUR,
+            StormAction.VAGUE_CHALEUR,
+            StormAction.VAGUE_CHALEUR,
 
-            StormAction.unleash,
-            StormAction.unleash,
-            StormAction.unleash,
+            StormAction.DECHAINE,
+            StormAction.DECHAINE,
+            StormAction.DECHAINE,
         };
         Collections.addAll(arr, values);
         this.deck = new Deck<StormAction>(arr, DeckType.stormAction);
@@ -674,11 +693,15 @@ class ThirdScreenRightPanel extends JPanel {
         this.add(exploreButton);
 
         final JButton takeButton = new JButton("Prendre une pièce");
-        takeButton.setEnabled(this.game.getBoard().getCell(this.game.getCurrentPlayer().getPosition()).getType() == CellType.empty && this.game.isPlayerTurn());
+        takeButton.setEnabled(this.game.canPickPiece() != null);
         takeButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 System.out.println("prendre pièce");
+                final PieceType piece = game.pick();
+                if (piece != null) {
+                    JOptionPane.showMessageDialog(null, piece.toString(), "Nouvelle pièce !", JOptionPane.INFORMATION_MESSAGE);
+                }
             }
         });
         this.add(takeButton);
@@ -874,9 +897,27 @@ class PlayerCard extends JPanel {
                 JOptionPane.showMessageDialog(null, message, "Equipement", JOptionPane.INFORMATION_MESSAGE);
             }
         };
+
         final JButton equipmentButton = new JButton("Inventaire (" + this.player.getEquipment().size() + ")");
         equipmentButton.addActionListener(equipmentListener);
         this.add(equipmentButton);
+
+        final ActionListener pieceListener = new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String message = "<html>";
+                for (PieceType piece: player.getPieces()) {
+                    message += (piece.toString() + "<br>");
+                }
+                message += "</html>";
+                JOptionPane.showMessageDialog(null, message, "Pièces", JOptionPane.INFORMATION_MESSAGE);
+            }
+        };
+        final JButton pieceButton = new JButton("Pièces (" + this.player.getPieces().size() + ")");
+        pieceButton.addActionListener(pieceListener);
+        if (player.getPieces().size() > 0) {
+            this.add(equipmentButton);
+        }
     }
 }
 
@@ -893,144 +934,5 @@ class PlayerColor extends JPanel {
         g.setColor(this.player.getColor());
         /** Coloration d'un rectangle. */
         g.fillRect(0, 0, 20, 20);
-    }
-}
-class VueTexte extends JTextPane implements Observer {
-    /** On maintient une référence vers le modèle. */
-
-    private Game game;
-
-    /** Constructeur. */
-    public VueTexte(Game g) {
-        this.game = g;
-        /** On enregistre la vue [this] en tant qu'observateur de [modele]. */
-        this.game.addObserver(this);
-
-        this.setText("Quantité totale de sable : " + g.getBoard().getSandLevel());
-        this.setEditable(false);
-    }
-
-
-
-    /**
-     * L'interface [Observer] demande de fournir une méthode [update], qui
-     * sera appelée lorsque la vue sera notifiée d'un changement dans le
-     * modèle. Ici on se content de réafficher toute la grille avec la méthode
-     * prédéfinie [repaint].
-     */
-    public void update() {
-        this.setText("Quantité totale de sable : " + this.game.getBoard().getSandLevel());
-    }
-}
-
-
-/**
- * Une classe pour représenter la zone contenant le bouton.
- *
- * Cette zone n'aura pas à être mise à jour et ne sera donc pas un observateur.
- * En revanche, comme la zone précédente, celle-ci est un panneau [JPanel].
- */
-class VueCommandes extends JPanel {
-    /**
-     * Pour que le bouton puisse transmettre ses ordres, on garde une
-     * référence au modèle.
-     */
-    private final Game game;
-
-    /** Constructeur. */
-    public VueCommandes(Game g) {
-        this.game = g;
-        /**
-         * On crée un nouveau bouton, de classe [JButton], en précisant le
-         * texte qui doit l'étiqueter.
-         * Puis on ajoute ce bouton au panneau [this].
-         */
-        JButton finDeTour = new JButton("Fin de tour");
-        this.add(finDeTour);
-        /**
-         * Le bouton, lorsqu'il est cliqué par l'utilisateur, produit un
-         * événement, de classe [ActionEvent].
-         *
-         * On a ici une variante du schéma observateur/observé : un objet
-         * implémentant une interface [ActionListener] va s'inscrire pour
-         * "écouter" les événements produits par le bouton, et recevoir
-         * automatiquements des notifications.
-         * D'autres variantes d'auditeurs pour des événements particuliers :
-         * [MouseListener], [KeyboardListener], [WindowListener].
-         *
-         * Cet observateur va enrichir notre schéma Modèle-Vue d'une couche
-         * intermédiaire Contrôleur, dont l'objectif est de récupérer les
-         * événements produits par la vue et de les traduire en instructions
-         * pour le modèle.
-         * Cette strate intermédiaire est potentiellement riche, et peut
-         * notamment traduire les mêmes événements de différentes façons en
-         * fonction d'un état de l'application.
-         * Ici nous avons un seul bouton réalisant une seule action, notre
-         * contrôleur sera donc particulièrement simple. Cela nécessite
-         * néanmoins la création d'une classe dédiée.
-         */
-        Controleur ctrl = new Controleur(this.game);
-        /** Enregistrement du contrôleur comme auditeur du bouton. */
-        finDeTour.addActionListener(ctrl);
-
-        /**
-         * Variante : une lambda-expression qui évite de créer une classe
-         * spécifique pour un contrôleur simplissime.
-         *
-         JButton boutonAvance = new JButton(">");
-         this.add(boutonAvance);
-         boutonAvance.addActionListener(e -> { modele.avance(); });
-         *
-         */
-
-    }
-}
-/** Fin de la vue. */
-
-/**
- * Classe pour notre contrôleur rudimentaire.
- *
- * Le contrôleur implémente l'interface [ActionListener] qui demande
- * uniquement de fournir une méthode [actionPerformed] indiquant la
- * réponse du contrôleur à la réception d'un événement.
- */
-class Controleur implements ActionListener {
-    /**
-     * On garde un pointeur vers le modèle, car le contrôleur doit
-     * provoquer un appel de méthode du modèle.
-     * Remarque : comme cette classe est interne, cette inscription
-     * explicite du modèle est inutile. On pourrait se contenter de
-     * faire directement référence au modèle enregistré pour la classe
-     * englobante [VueCommandes].
-     */
-    private final Game game;
-    public Controleur(Game g) { this.game = g; }
-    /**
-     * Action effectuée à réception d'un événement : appeler la
-     * méthode [avance] du modèle.
-     */
-    public void actionPerformed(ActionEvent e) {
-        System.out.println("Fin de tour");
-        game.endOfTurn();
-    }
-}
-
-class DeplacementListener extends KeyAdapter {
-    @Override
-    public void keyTyped(KeyEvent evt) {
-        System.out.print(evt.getKeyCode());
-        if (evt.getKeyCode() == 104) {
-            // 8 -> deplacement vers le haut
-            System.out.print("haut");
-        } else if (evt.getKeyCode() == 102) {
-            // 6 -> deplacement vers la droite
-            System.out.print("droite");
-        } else if (evt.getKeyCode() == 100) {
-            // 4 -> deplacement vers la gauche
-            System.out.print("gauche");
-        } else if (evt.getKeyCode() == 98) {
-            // 2 -> deplacement vers le bas
-            System.out.print("bas");
-        }
     }
 }

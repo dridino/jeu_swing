@@ -6,17 +6,23 @@ public class Equipment {
         this.type = type;
 
         switch (type) {
-            case shield:
+            case BOUCLIER:
                 this.name = "Shield";
                 break;
-            case blaster:
+            case BLASTER:
                 this.name = "Blaster";
                 break;
-            case jetpack:
+            case JETPACK:
                 this.name = "JetPack";
                 break;
-            case xRay:
+            case X_RAY:
                 this.name = "XRay";
+                break;
+            case ACCELERATEUR_DE_TEMPS:
+                this.name = "Time";
+                break;
+            case RESERVE_D_EAU:
+                this.name = "Water";
                 break;
         }
     }

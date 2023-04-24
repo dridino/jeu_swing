@@ -3,25 +3,34 @@ import java.util.List;
 
 public class Cell extends Observable {
     private CellType type;
-    private ArrayList<Integer> playerIds = new ArrayList<Integer>();
+    private final ArrayList<Integer> playerIds;
     private CellContent content;
 
-    private boolean isExplored = false;
+    private boolean isExplored;
     private boolean equipmentPicked = false;
+    private boolean waterConsumed;
+    private PieceType piece;
 
-    public Cell(CellType type, ArrayList<Integer> players, CellContent content) {
+    public Cell(CellType type, ArrayList<Integer> players, CellContent content, boolean isExplored) {
         this.type = type;
-        this.playerIds.addAll(players);
+        this.playerIds = players;
         this.content = content;
+        this.isExplored = isExplored;
+        this.waterConsumed = content != CellContent.oasis;
         notifyObservers();
     }
 
-    public boolean is(Cell c) {
-        return this.type == c.type && this.playerIds == c.playerIds && this.content == c.content;
+    public void consumeWater() {
+        this.waterConsumed = true;
+        notifyObservers();
+    }
+
+    public boolean isWaterConsumed() {
+        return this.waterConsumed;
     }
 
     public Cell copy() {
-        return new Cell(this.type, this.playerIds, this.content);
+        return new Cell(this.type, this.playerIds, this.content, this.isExplored);
     }
 
     public CellType getType() {
@@ -32,27 +41,17 @@ public class Cell extends Observable {
         return this.isExplored;
     }
 
+    public PieceType getPiece() {
+        return this.piece;
+    }
+
     public void explore() {
         this.isExplored = true;
         notifyObservers();
     }
 
-    public void setType(CellType t) {
-        this.type = t;
-        notifyObservers();
-    }
-
-    public boolean isEquipmentPicked() {
-        return this.equipmentPicked;
-    }
-
     public CellContent getContent() {
         return this.content;
-    }
-
-    public void pickEquipment() {
-        this.equipmentPicked = true;
-        notifyObservers();
     }
 
     public List<Integer> getPlayerIds() {
@@ -97,9 +96,5 @@ public class Cell extends Observable {
             default:
                 return 0;
         }
-    }
-
-    public boolean containsEquipment() {
-        return this.content == CellContent.equipment || this.content == CellContent.crash || this.content == CellContent.tunnel;
     }
 }

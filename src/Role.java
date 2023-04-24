@@ -6,23 +6,23 @@ public class Role {
     public Role(PlayerType type) {
         this.playerType = type;
         switch (type) {
-            case explo:
+            case EXPLORATEUR:
                 this.name = "Explorateur";
                 this.description = "Je suis un explorateur";
                 break;
-            case alpinist:
+            case ALPINISTE:
                 this.name = "Alpiniste";
                 this.description = "Je suis un alpiniste";
                 break;
-            case archeo:
+            case ARCHEOLOGUE:
                 this.name = "Archéologue";
                 this.description = "Je suis un archéologue";
                 break;
-            case meteo:
+            case METEOROLOGUE:
                 this.name = "Météorologue";
                 this.description = "Je suis un météorologue";
                 break;
-            case navig:
+            case NAVIGATEUR:
                 this.name = "Navigateur";
                 this.description = "Je suis un navigateur";
                 break;
@@ -31,14 +31,6 @@ public class Role {
                 this.description = "Je suis une porteuse d'eau";
                 break;
         }
-    }
-
-    public String getName() {
-        return this.name;
-    }
-
-    public PlayerType getPlayerType() {
-        return this.playerType;
     }
 
     public String getDescription() {

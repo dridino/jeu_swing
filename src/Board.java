@@ -50,9 +50,9 @@ public class Board extends Observable implements Observer {
                     final CellType cellType = ((i == 0 && (j == 2)) || (i == 1 && (j == 1 || j == 3)) || (i == 2 && (j == 0 || j == 4)) || (i == 3 && (j == 1 || j == 3)) || (i == 4 && j == 2)) ? CellType.sand1 : CellType.empty;
                     final CellContent cellContent = deck.pick();
                     final ArrayList<Integer> players = new ArrayList<Integer>();
-                    this.board[i][j] = new Cell(cellType, players, cellContent);
+                    this.board[i][j] = new Cell(cellType, players, cellContent, false);
                 } else {
-                    this.board[i][j] = new Cell(CellType.eye, new ArrayList<Integer>(), CellContent.none);
+                    this.board[i][j] = new Cell(CellType.eye, new ArrayList<Integer>(), CellContent.none, false);
                 }
                 this.board[i][j].addObserver(this);
             }
@@ -91,6 +91,53 @@ public class Board extends Observable implements Observer {
          */
     }
 
+    private boolean inLine(CellContent content, Coord c) {
+        for (int j = 0; j < 5; j++) {
+            if (this.getCell(new Coord(c.x, j)).getContent() == content) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean inColumn(CellContent content, Coord c) {
+        for (int i = 0; i < 5; i++) {
+            if (this.getCell(new Coord(i, c.y)).getContent() == content) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public PieceType updatePieceCoord(Coord c) {
+        final Cell currentCell = this.getCell(c);
+        if (currentCell.getType() == CellType.empty && currentCell.isExplored()) {
+            return null;
+        }
+        if (this.inLine(CellContent.clueRowEngine, c) && this.inColumn(CellContent.clueColumnEngine, c)) {
+            return PieceType.engine;
+        }
+        if (this.inLine(CellContent.clueRowWheel, c) && this.inColumn(CellContent.clueColumnWheel, c)) {
+            return PieceType.wheel;
+        }
+        if (this.inLine(CellContent.clueRowEnergy, c) && this.inColumn(CellContent.clueColumnEnergy, c)) {
+            return PieceType.energy;
+        }
+        if (this.inLine(CellContent.clueRowRotor, c) && this.inColumn(CellContent.clueColumnRotor, c)) {
+            return PieceType.rotor;
+        }
+        return null;
+    }
+
+    public void updatePiece() {
+        for (int i = 0; i < 5; i++) {
+            for (int j = 0; j < 5; j++) {
+                this.updatePieceCoord(new Coord(i, j));
+            }
+        }
+
+    }
+
     public void positionPlayers(ArrayList<Player> players) {
         for (int i = 0; i < 5; i++) {
             for (int j = 0; j < 5; j++) {
@@ -118,40 +165,11 @@ public class Board extends Observable implements Observer {
         this.notifyObservers();
     }
 
-    public Cell[][] getBoard() {
-        return this.board;
-    }
-
     public double getStormLevel() {
         return this.stormLevel;
     }
 
-    public void increaseStormLevel() {
-        this.stormLevel += 0.5;
-        this.notifyObservers();
-    }
-
     public int getSandLevel() {
-        return this.sandLevel;
-    }
-
-    public int updateSandLevel() {
-        this.sandLevel = 0;
-        for (int i = 0; i < 5; i++) {
-            for (int j = 0; j < 5; j++) {
-                switch (this.board[i][j].getType()) {
-                    case sand1:
-                        sandLevel += 1;
-                        break;
-                    case sand2:
-                        sandLevel += 2;
-                        break;
-                    default:
-                        break;
-                }
-            }
-        }
-        this.notifyObservers();
         return this.sandLevel;
     }
 
@@ -174,96 +192,56 @@ public class Board extends Observable implements Observer {
         final Cell tmp = this.board[c1.x][c1.y].copy();
         this.board[c1.x][c1.y] = this.board[c2.x][c2.y].copy();
         this.board[c2.x][c2.y] = tmp;
+        notifyObservers();
     }
 
-    public void sandstorm() {
-        // le vent souffle
-        final double dirP = Math.random();
-        Coord oeilPos = this.getOeil();
-        // 1 <= force <= 3
-        final int force = (int) (Math.floor(Math.random()*2.9) + 1);
 
-        System.out.print(force + " ");
-        if (dirP < 0.25) {
-            // sud
-            System.out.print("sud\n");
-
-            final int maxValue = Math.max((int) Math.floor(oeilPos.x-force), 0);
-
-            while (oeilPos.x > maxValue) {
-                this.switchCases(new Coord(oeilPos.x - 1, oeilPos.y), new Coord(oeilPos.x, oeilPos.y));
-                oeilPos = this.getOeil();
-            }
-        } else if (dirP < 0.5) {
-            // nord
-            System.out.print("nord\n");
-
-            final int maxValue = Math.min((int) Math.floor(oeilPos.x+force), 5 - 1);
-
-            while (oeilPos.x < maxValue) {
-                this.switchCases(new Coord(oeilPos.x + 1, oeilPos.y), new Coord(oeilPos.x, oeilPos.y));
-                oeilPos = this.getOeil();
-            }
-
-        } else if (dirP < 0.75) {
-            // est
-            System.out.print("est\n");
-
-            final int maxValue = Math.max((int) Math.floor(oeilPos.y-force), 0);
-
-            while (oeilPos.y > maxValue) {
-                this.switchCases(new Coord(oeilPos.x, oeilPos.y - 1), new Coord(oeilPos.x, oeilPos.y));
-                oeilPos = this.getOeil();
-            }
-
-        } else {
-            // est
-            System.out.print("ouest\n");
-
-            final int maxValue = Math.min((int) Math.floor(oeilPos.y+force), 5 - 1);
-
-            while (oeilPos.y < maxValue) {
-                this.switchCases(new Coord(oeilPos.x, oeilPos.y + 1), new Coord(oeilPos.x, oeilPos.y));
-                oeilPos = this.getOeil();
-            }
-        }
-        this.notifyObservers();
-    }
-
-    public void moveNorth(int n) {
+    public void moveNorth(int n, Player currentPlayer) {
         int i = 0;
         while (this.getOeil().x < 4 && i < n) {
             final Coord newCoord = new Coord(this.getOeil().x+1, this.getOeil().y);
+            if (currentPlayer.getPosition().isEqual(newCoord)) {
+                currentPlayer.setPosition(this.getOeil());
+            }
             this.getCell(newCoord).addSand();
             this.switchCases(newCoord, this.getOeil());
             i++;
         }
     }
 
-    public void moveSouth(int n) {
+    public void moveSouth(int n, Player currentPlayer) {
         int i = 0;
         while (this.getOeil().x > 0 && i < n) {
             final Coord newCoord = new Coord(this.getOeil().x-1, this.getOeil().y);
+            if (currentPlayer.getPosition().isEqual(newCoord)) {
+                currentPlayer.setPosition(this.getOeil());
+            }
             this.getCell(newCoord).addSand();
             this.switchCases(newCoord, this.getOeil());
             i++;
         }
     }
 
-    public void moveEast(int n) {
+    public void moveEast(int n, Player currentPlayer) {
         int i = 0;
         while (this.getOeil().y > 0 && i < n) {
             final Coord newCoord = new Coord(this.getOeil().x, this.getOeil().y - 1);
+            if (currentPlayer.getPosition().isEqual(newCoord)) {
+                currentPlayer.setPosition(this.getOeil());
+            }
             this.getCell(newCoord).addSand();
             this.switchCases(newCoord, this.getOeil());
             i++;
         }
     }
 
-    public void moveWest(int n) {
+    public void moveWest(int n, Player currentPlayer) {
         int i = 0;
         while (this.getOeil().y < 4 && i < n) {
             final Coord newCoord = new Coord(this.getOeil().x, this.getOeil().y + 1);
+            if (currentPlayer.getPosition().isEqual(newCoord)) {
+                currentPlayer.setPosition(this.getOeil());
+            }
             this.getCell(newCoord).addSand();
             this.switchCases(newCoord, this.getOeil());
             i++;
@@ -274,45 +252,45 @@ public class Board extends Observable implements Observer {
         this.stormLevel += 0.5;
     }
 
-    public void handleStormEvents(StormAction action) {
+    public void handleStormEvents(StormAction action, Player currentPlayer) {
         switch (action) {
             case north1:
-                this.moveNorth(1);
+                this.moveNorth(1, currentPlayer);
                 break;
             case north2:
-                this.moveNorth(2);
+                this.moveNorth(2, currentPlayer);
                 break;
             case north3:
-                this.moveNorth(3);
+                this.moveNorth(3, currentPlayer);
                 break;
             case south1:
-                this.moveSouth(1);
+                this.moveSouth(1, currentPlayer);
                 break;
             case south2:
-                this.moveSouth(2);
+                this.moveSouth(2, currentPlayer);
                 break;
             case south3:
-                this.moveSouth(3);
+                this.moveSouth(3, currentPlayer);
                 break;
             case west1:
-                this.moveWest(1);
+                this.moveWest(1, currentPlayer);
                 break;
             case west2:
-                this.moveWest(2);
+                this.moveWest(2, currentPlayer);
                 break;
             case west3:
-                this.moveWest(3);
+                this.moveWest(3, currentPlayer);
                 break;
             case east1:
-                this.moveEast(1);
+                this.moveEast(1, currentPlayer);
                 break;
             case east2:
-                this.moveEast(2);
+                this.moveEast(2, currentPlayer);
                 break;
             case east3:
-                this.moveEast(3);
+                this.moveEast(3, currentPlayer);
                 break;
-            case unleash:
+            case DECHAINE:
                 this.unleash();
                 break;
         }

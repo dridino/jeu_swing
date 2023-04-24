@@ -1,6 +1,5 @@
 import java.util.ArrayList; 
 import java.util.Collections;
-import java.util.List;
 
 public class Game extends Observable implements Observer {
     private Board board;
@@ -13,29 +12,36 @@ public class Game extends Observable implements Observer {
     private final Deck<StormAction> defausse = new Deck<StormAction>(new ArrayList<StormAction>(), DeckType.defausse);
     private final Deck<ObjectType> equipmentDeck;
     private GameResults gameResults = GameResults.none;
+    private PlayerType playerType;
+    private String playerPseudo;
+    private final ArrayList<PieceType> piecesPicked = new ArrayList<PieceType>();
+    private final Deck<PlayerType> playerTypeDeck;
 
     public Game(ArrayList<Player> players) {
         for (Player p: players) {
             p.addObserver(this);
         }
+        final ArrayList<PlayerType> arr1 = new ArrayList<PlayerType>();
+        Collections.addAll(arr1, PlayerType.values());
+        this.playerTypeDeck = new Deck<PlayerType>(arr1, DeckType.playerType);
         final ArrayList<ObjectType> arr = new ArrayList<ObjectType>();
-        Collections.addAll(arr, ObjectType.blaster,
-                ObjectType.blaster,
-                ObjectType.blaster,
+        Collections.addAll(arr, ObjectType.BLASTER,
+                ObjectType.BLASTER,
+                ObjectType.BLASTER,
 
-                ObjectType.jetpack,
-                ObjectType.jetpack,
-                ObjectType.jetpack,
+                ObjectType.JETPACK,
+                ObjectType.JETPACK,
+                ObjectType.JETPACK,
 
-                ObjectType.shield,
-                ObjectType.shield,
+                ObjectType.BOUCLIER,
+                ObjectType.BOUCLIER,
 
-                ObjectType.xRay,
-                ObjectType.xRay,
+                ObjectType.X_RAY,
+                ObjectType.X_RAY,
 
-                ObjectType.time,
+                ObjectType.ACCELERATEUR_DE_TEMPS,
 
-                ObjectType.water);
+                ObjectType.RESERVE_D_EAU);
         this.equipmentDeck = new Deck<ObjectType>(arr, DeckType.equipmentType);
         this.board = new Board(players);
         this.board.addObserver(this);
@@ -55,6 +61,10 @@ public class Game extends Observable implements Observer {
     public void increasePickCards() {
         this.pickedCards++;
         notifyObservers();
+    }
+
+    public Deck<PlayerType> getPlayerTypeDeck() {
+        return this.playerTypeDeck;
     }
 
     public int getPickedCards() {
@@ -102,14 +112,7 @@ public class Game extends Observable implements Observer {
         if (this.gameResults == GameResults.loose) {
             this.nextScreen();
         } else {
-            boolean samePos = true;
-            for (Player p: this.players) {
-                if (this.board.getCell(p.getPosition()).getContent() != CellContent.takeoff) {
-                    samePos = false;
-                    break;
-                }
-            }
-            if (samePos) {
+            if (this.victory()) {
                 this.gameResults = GameResults.win;
                 this.nextScreen();
             }
@@ -153,8 +156,8 @@ public class Game extends Observable implements Observer {
         if (player.getRemainingActions() == 0) {
             this.endOfTurn();
         }
-        notifyObservers();
         this.updateGameResult();
+        notifyObservers();
         return c;
     }
 
@@ -168,6 +171,7 @@ public class Game extends Observable implements Observer {
         if (player.getRemainingActions() == 0) {
             this.endOfTurn();
         }
+        this.updateGameResult();
         notifyObservers();
     }
 
@@ -182,26 +186,6 @@ public class Game extends Observable implements Observer {
     public Player getCurrentPlayer() {
         return this.players.get(this.currentPlayer);
     }
-
-    /* public void endOfTurn() {
-        for (int i = 0; i < this.board.getStormLevel(); i++) {
-            final double p = Math.random();
-            // 1 chance sur 2 de faire souffler le vent
-            if (p < 0.5) {
-                this.board.sandstorm();
-            } else {
-                this.board.increaseStormLevel();
-            }
-        }
-        this.board.updateSandLevel();
-        notifyObservers();
-        if (this.board.getSandLevel() >= 43) {
-            // écrit en rouge
-            System.out.println("\u001B[31m! Fin du jeu par ensablement ! \u001B[0m");
-        } else if (this.board.getStormLevel() > 7) {
-            System.out.println("\u001B[31m! Fin du jeu, la tempête est trop puissante ! \u001B[0m");
-        }
-    }*/
 
     public void endOfTurn() {
         this.turn = Turn.storm;
@@ -234,10 +218,10 @@ public class Game extends Observable implements Observer {
     public void handleStormEvents(StormAction action) {
         this.defausse.add(action);
         this.increasePickCards();
-        if (action == StormAction.heatwave) {
+        if (action == StormAction.VAGUE_CHALEUR) {
             this.heatWave();
         }
-        this.board.handleStormEvents(action);
+        this.board.handleStormEvents(action, this.getCurrentPlayer());
         this.updateGameResult();
         this.notifyObservers();
         if (this.pickedCards == Math.floor(this.board.getStormLevel())) {
@@ -252,22 +236,20 @@ public class Game extends Observable implements Observer {
         notifyObservers();
     }
 
-    private boolean inLine(CellContent content) {
-        for (int j = 0; j < 5; j++) {
-            if (this.board.getCell(new Coord(this.getCurrentPlayer().getPosition().x, j)).getContent() == content) {
-                return true;
-            }
-        }
-        return false;
+    public PieceType canPickPiece() {
+        return this.board.updatePieceCoord(this.getCurrentPlayer().getPosition());
     }
 
-    private boolean inColumn(CellContent content) {
-        for (int i = 0; i < 5; i++) {
-            if (this.board.getCell(new Coord(i, this.getCurrentPlayer().getPosition().y)).getContent() == content) {
-                return true;
+    public void addWater() {
+        final Cell currentCell = this.board.getCell(this.getCurrentPlayer().getPosition());
+        if (currentCell.isExplored() && currentCell.getContent() == CellContent.oasis) {
+            for (Player p: this.players) {
+                if (!currentCell.isWaterConsumed() || this.getCurrentPlayer().getType() == PlayerType.PORTEUSE_D_EAU) {
+                    p.addWater();
+                }
             }
+            currentCell.consumeWater();
         }
-        return false;
     }
 
     public CellContent explore() {
@@ -277,8 +259,45 @@ public class Game extends Observable implements Observer {
         if (player.getRemainingActions() == 0) {
             this.endOfTurn();
         }
+        this.board.updatePiece();
+        this.addWater();
+        this.updateGameResult();
         notifyObservers();
         return this.board.getCell(player.getPosition()).getContent();
+    }
+
+    public PieceType pick() {
+        final PieceType piece = this.canPickPiece();
+        if (piece != null) {
+            this.piecesPicked.add(piece);
+            this.getCurrentPlayer().addPiece(piece);
+            notifyObservers();
+            return piece;
+        }
+        return null;
+    }
+
+    public boolean victory() {
+        Coord takeOffCoord = new Coord(0, 0);
+        for (int i = 0; i < 5; i++) {
+            for (int j = 0; j < 5; j++) {
+                if (this.board.getCell(new Coord(i, j)).getType() != CellType.empty) {
+                    return false;
+                }
+                if (this.board.getCell(new Coord(i, j)).getContent() == CellContent.takeoff) {
+                    takeOffCoord = new Coord(i, j);
+                    break;
+                }
+            }
+        }
+
+        for (Player p: this.players) {
+            if (!p.getPosition().isEqual(takeOffCoord)) {
+                return false;
+            }
+        }
+
+        return this.piecesPicked.size() == 4;
     }
 
     public void setTurn(Turn v) {
@@ -299,11 +318,27 @@ public class Game extends Observable implements Observer {
         if (this.equipmentDeck.isNotEmpty()) {
             final Equipment equipment = new Equipment(this.equipmentDeck.pick());
             final Player player = this.players.get(this.currentPlayer);
-            player.addObject(equipment);
+            player.addEquipment(equipment);
             this.turn = player.getRemainingActions() == 0 ? Turn.storm : Turn.player;
             notifyObservers();
             return equipment;
         }
         return null;
+    }
+
+    public void setPlayerType(PlayerType playerType) {
+        this.playerType = playerType;
+    }
+
+    public void setPlayerPseudo(String playerPseudo) {
+        this.playerPseudo = playerPseudo;
+    }
+
+    public PlayerType getPlayerType() {
+        return this.playerType;
+    }
+
+    public String getPlayerPseudo() {
+        return this.playerPseudo;
     }
 }

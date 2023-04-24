@@ -1,6 +1,5 @@
 import java.awt.*;
 import java.util.ArrayList;
-import java.util.Set;
 
 public class Player extends Observable {
     private static Color[] colors = {Color.green, Color.pink, Color.cyan, Color.red, Color.blue};
@@ -18,6 +17,7 @@ public class Player extends Observable {
     private DeplacementType deplacementType;
     private boolean canRemoveStormCard;
     private Color color;
+    private ArrayList<PieceType> pieces = new ArrayList<PieceType>();
 
     private ArrayList<Equipment> objects = new ArrayList<Equipment>();
 
@@ -39,25 +39,30 @@ public class Player extends Observable {
         this.canRemoveStormCard = false;
 
         switch (this.type) {
-            case archeo:
+            case ARCHEOLOGUE:
                 this.maxSandRemove = 2;
                 break;
-            case alpinist:
+            case ALPINISTE:
                 this.maxSandDeplacement = 2;
                 break;
-            case explo:
+            case EXPLORATEUR:
                 this.deplacementType = DeplacementType.diagonal;
                 break;
-            case meteo:
+            case METEOROLOGUE:
                 this.canRemoveStormCard = true;
                 break;
-            case navig:
+            case NAVIGATEUR:
                 break;
-            case water:
+            case PORTEUSE_D_EAU:
                 this.maxWater = 5;
                 this.waterLevel = 5;
                 break;
         }
+    }
+
+    public void addPiece(PieceType piece) {
+        this.pieces.add(piece);
+        notifyObservers();
     }
 
     public int getId() {
@@ -83,14 +88,17 @@ public class Player extends Observable {
         return this.objects;
     }
 
-    public double increaseWaterLevel(int v) {
-        this.waterLevel += v;
-        return this.waterLevel;
-    }
-
     public double decreaseWaterLevel(double v) {
         this.waterLevel -= v;
         return this.waterLevel;
+    }
+
+    public void addWater() {
+        this.waterLevel = Math.min(this.waterLevel + 2, this.maxWater);
+    }
+
+    public ArrayList<PieceType> getPieces() {
+        return this.pieces;
     }
 
     public Coord getPosition() {
@@ -103,7 +111,7 @@ public class Player extends Observable {
 
     private boolean praticableCell(CellType cellType, PlayerAction action) {
         if (action == PlayerAction.move) {
-            return (cellType == CellType.sand1 || cellType == CellType.empty || (this.type == PlayerType.alpinist && cellType == CellType.sand2));
+            return (cellType == CellType.sand1 || cellType == CellType.empty || (this.type == PlayerType.ALPINISTE && cellType == CellType.sand2));
         } else {
             return (cellType == CellType.sand1 || cellType == CellType.sand2);
         }
@@ -175,7 +183,7 @@ public class Player extends Observable {
         final ArrayList<Coord> arr = new ArrayList<Coord>();
         arr.addAll(this.straightCoords(b, action));
 
-        if (this.type == PlayerType.explo) {
+        if (this.type == PlayerType.EXPLORATEUR) {
             arr.addAll(this.diagCoords(b, action));
         }
 
@@ -211,10 +219,6 @@ public class Player extends Observable {
         return this.type;
     }
 
-    public int getActionsDone() {
-        return this.actionsDone;
-    }
-
     public void resetActions() {
         this.actionsDone = 0;
     }
@@ -224,27 +228,11 @@ public class Player extends Observable {
         return this.actionsDone;
     }
 
-    public int getMaxActions() {
-        return this.maxActions;
-    }
-
-    public int getMaxDistance() {
-        return this.maxDistance;
-    }
-
     public int getMaxWater() {
         return this.maxWater;
     }
 
-    public ArrayList<Equipment> getObjects() {
-        return this.objects;
-    }
-
-    public void addObject(Equipment equipment) {
+    public void addEquipment(Equipment equipment) {
         this.objects.add(equipment);
-    }
-
-    public void removeObject(Equipment equipment) {
-        this.objects.removeIf(e -> e.getType() == equipment.getType());
     }
 }
