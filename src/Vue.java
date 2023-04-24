@@ -853,7 +853,7 @@ class PlayerCard extends JPanel {
         this.setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         this.setBackground(Color.white);
         this.setBorder(BorderFactory.createLineBorder(this.player.getColor(), 4));
-        this.setPreferredSize(new Dimension(180, 140));
+        this.setPreferredSize(new Dimension(180, 160));
 
         // JOUEUR
         final JTextArea playerArea = new JTextArea("Joueur : " + this.player.getPseudo());
