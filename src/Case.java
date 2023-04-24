@@ -5,7 +5,7 @@ enum CaseType {
     sable1,
     sable2,
     oeil,
-}
+} 
 
 public class Case {
     private CaseType caseType;
